@@ -4,10 +4,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { prisma } from "@/lib/db";
-import { formatRuntime, formatDate, formatMovieRating, getMovieRatingColor } from "@/lib/utils";
+import { MOCK_MOVIES, MOCK_REVIEWS } from "@/lib/mock-data";
+import { formatRuntime, formatDate, formatMovieRating, getMovieRatingColor, cn } from "@/lib/utils";
 import { ReviewSection } from "@/components/movie/ReviewSection";
-import { cn } from "@/lib/utils";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -15,29 +14,17 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const movie = await prisma.movie.findUnique({ where: { id } });
+  const movie = MOCK_MOVIES.find((m) => m.id === id);
   if (!movie) return { title: "영화를 찾을 수 없습니다" };
-  return {
-    title: movie.title,
-    description: movie.synopsis ?? undefined,
-  };
+  return { title: movie.title, description: movie.synopsis ?? undefined };
 }
 
 export default async function MovieDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const movie = await prisma.movie.findUnique({
-    where: { id },
-    include: {
-      reviews: {
-        include: { user: { select: { name: true, image: true } } },
-        orderBy: { createdAt: "desc" },
-        take: 10,
-      },
-      _count: { select: { reviews: true } },
-    },
-  });
-
+  const movie = MOCK_MOVIES.find((m) => m.id === id);
   if (!movie) notFound();
+
+  const reviews = MOCK_REVIEWS.filter((r) => r.movieId === id);
 
   return (
     <div>
@@ -115,10 +102,7 @@ export default async function MovieDetailPage({ params }: PageProps) {
 
             <div className="mt-8 flex gap-4">
               {movie.isNowShowing && (
-                <Link
-                  href={`/booking?movieId=${movie.id}`}
-                  className="btn-primary"
-                >
+                <Link href={`/booking?movieId=${movie.id}`} className="btn-primary">
                   예매하기
                 </Link>
               )}
@@ -136,8 +120,7 @@ export default async function MovieDetailPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* 리뷰 섹션 */}
-        <ReviewSection movieId={movie.id} reviews={movie.reviews} />
+        <ReviewSection movieId={movie.id} reviews={reviews} />
       </div>
     </div>
   );

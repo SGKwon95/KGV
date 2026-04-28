@@ -1,10 +1,9 @@
 export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { MOCK_BOOKINGS } from "@/lib/mock-data";
 import { formatDate, formatPrice } from "@/lib/utils";
 import { CheckCircle } from "lucide-react";
 
@@ -15,27 +14,10 @@ interface PageProps {
 }
 
 export default async function BookingCompletePage({ searchParams }: PageProps) {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
-
   const { bookingId } = await searchParams;
   if (!bookingId) notFound();
 
-  const booking = await prisma.booking.findUnique({
-    where: { id: bookingId, userId: session.user.id },
-    include: {
-      screening: {
-        include: {
-          movie: true,
-          hall: { include: { theater: true } },
-        },
-      },
-      bookingSeats: {
-        include: { seat: true },
-      },
-    },
-  });
-
+  const booking = MOCK_BOOKINGS.find((b) => b.id === bookingId);
   if (!booking) notFound();
 
   const { screening, bookingSeats } = booking;
@@ -57,11 +39,15 @@ export default async function BookingCompletePage({ searchParams }: PageProps) {
         </div>
         <div className="flex justify-between">
           <span className="text-gray-400 text-sm">극장</span>
-          <span className="text-white text-sm">{screening.hall.theater.name} {screening.hall.name}</span>
+          <span className="text-white text-sm">
+            {screening.hall.theater.name} {screening.hall.name}
+          </span>
         </div>
         <div className="flex justify-between">
           <span className="text-gray-400 text-sm">일시</span>
-          <span className="text-white text-sm">{formatDate(screening.startTime, "yyyy.MM.dd HH:mm")}</span>
+          <span className="text-white text-sm">
+            {formatDate(screening.startTime, "yyyy.MM.dd HH:mm")}
+          </span>
         </div>
         <div className="flex justify-between">
           <span className="text-gray-400 text-sm">좌석</span>

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { MOCK_SCREENINGS } from "@/lib/mock-data";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -17,22 +17,11 @@ export async function GET(request: Request) {
   const endOfDay = new Date(targetDate);
   endOfDay.setHours(23, 59, 59, 999);
 
-  const screenings = await prisma.screening.findMany({
-    where: {
-      movieId,
-      startTime: { gte: startOfDay, lte: endOfDay },
-      status: "SCHEDULED",
-      ...(theaterId && { hall: { theaterId } }),
-    },
-    include: {
-      hall: {
-        include: {
-          theater: { select: { id: true, name: true, region: true } },
-        },
-      },
-      _count: { select: { bookings: true } },
-    },
-    orderBy: { startTime: "asc" },
+  const screenings = MOCK_SCREENINGS.filter((s) => {
+    if (s.movieId !== movieId) return false;
+    if (s.startTime < startOfDay || s.startTime > endOfDay) return false;
+    if (theaterId && s.hall.theater.id !== theaterId) return false;
+    return true;
   });
 
   return NextResponse.json(screenings);

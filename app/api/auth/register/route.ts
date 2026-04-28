@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/db";
 import { z } from "zod";
 
 const registerSchema = z.object({
@@ -10,15 +8,15 @@ const registerSchema = z.object({
   phone: z.string().optional(),
 });
 
+// Mock 회원 저장소 (인메모리)
+const MOCK_USERS: { id: string; name: string; email: string }[] = [];
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const data = registerSchema.parse(body);
 
-    const existing = await prisma.user.findUnique({
-      where: { email: data.email },
-    });
-
+    const existing = MOCK_USERS.find((u) => u.email === data.email);
     if (existing) {
       return NextResponse.json(
         { error: "이미 사용 중인 이메일입니다." },
@@ -26,17 +24,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const hashed = await bcrypt.hash(data.password, 12);
-
-    const user = await prisma.user.create({
-      data: {
-        name: data.name,
-        email: data.email,
-        password: hashed,
-        phone: data.phone,
-      },
-      select: { id: true, name: true, email: true },
-    });
+    const user = {
+      id: `user-${Date.now()}`,
+      name: data.name,
+      email: data.email,
+    };
+    MOCK_USERS.push(user);
 
     return NextResponse.json({ success: true, user }, { status: 201 });
   } catch (error) {

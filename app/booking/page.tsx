@@ -1,10 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import { BookingFlow } from "@/components/booking/BookingFlow";
-import { prisma } from "@/lib/db";
+import { MOCK_MOVIES, MOCK_THEATERS } from "@/lib/mock-data";
 
 export const metadata: Metadata = {
   title: "영화 예매",
@@ -15,23 +13,21 @@ interface PageProps {
 }
 
 export default async function BookingPage({ searchParams }: PageProps) {
-  const session = await auth();
-  if (!session) {
-    redirect("/login?callbackUrl=/booking");
-  }
-
   const params = await searchParams;
 
-  const movies = await prisma.movie.findMany({
-    where: { isNowShowing: true },
-    select: { id: true, title: true, rating: true, runtime: true, posterUrl: true },
-    orderBy: { bookingRate: "desc" },
-  });
+  const movies = MOCK_MOVIES.filter((m) => m.isNowShowing).map((m) => ({
+    id: m.id,
+    title: m.title,
+    rating: m.rating,
+    runtime: m.runtime,
+    posterUrl: m.posterUrl,
+  }));
 
-  const theaters = await prisma.theater.findMany({
-    select: { id: true, name: true, region: true },
-    orderBy: { name: "asc" },
-  });
+  const theaters = MOCK_THEATERS.map((t) => ({
+    id: t.id,
+    name: t.name,
+    region: t.region,
+  }));
 
   return (
     <div className="container-main py-10">

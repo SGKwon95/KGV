@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { MOCK_MOVIES } from "@/lib/mock-data";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -9,29 +9,25 @@ export async function GET(request: Request) {
   const page = parseInt(searchParams.get("page") ?? "1");
   const limit = parseInt(searchParams.get("limit") ?? "12");
 
-  const where = {
-    ...(type === "nowShowing" && { isNowShowing: true }),
-    ...(type === "comingSoon" && { isComingSoon: true }),
-    ...(genre && { genre: { contains: genre } }),
-  };
+  let movies = MOCK_MOVIES.filter((m) => {
+    if (type === "nowShowing") return m.isNowShowing;
+    if (type === "comingSoon") return m.isComingSoon;
+    return true;
+  });
 
-  const orderBy =
-    sort === "score"
-      ? { avgScore: "desc" as const }
-      : sort === "release"
-        ? { releaseDate: "desc" as const }
-        : { bookingRate: "desc" as const };
+  if (genre) {
+    movies = movies.filter((m) => m.genre?.includes(genre));
+  }
 
-  const [items, total] = await Promise.all([
-    prisma.movie.findMany({
-      where,
-      orderBy,
-      skip: (page - 1) * limit,
-      take: limit,
-      include: { _count: { select: { reviews: true } } },
-    }),
-    prisma.movie.count({ where }),
-  ]);
+  movies = [...movies].sort((a, b) => {
+    if (sort === "score") return b.avgScore - a.avgScore;
+    if (sort === "release")
+      return (b.releaseDate?.getTime() ?? 0) - (a.releaseDate?.getTime() ?? 0);
+    return b.bookingRate - a.bookingRate;
+  });
+
+  const total = movies.length;
+  const items = movies.slice((page - 1) * limit, page * limit);
 
   return NextResponse.json({
     items,

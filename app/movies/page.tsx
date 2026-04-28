@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
-import { prisma } from "@/lib/db";
+import { MOCK_MOVIES } from "@/lib/mock-data";
 import { MovieCard } from "@/components/movie/MovieCard";
 import { MovieFilter } from "@/components/movie/MovieFilter";
 
@@ -20,19 +20,21 @@ export default async function MoviesPage({ searchParams }: PageProps) {
   const genre = params.genre;
   const sort = params.sort ?? "bookingRate";
 
-  const movies = await prisma.movie.findMany({
-    where: {
-      ...(type === "nowShowing" && { isNowShowing: true }),
-      ...(type === "comingSoon" && { isComingSoon: true }),
-      ...(genre && { genre: { contains: genre } }),
-    },
-    orderBy:
-      sort === "score"
-        ? { avgScore: "desc" }
-        : sort === "release"
-          ? { releaseDate: "desc" }
-          : { bookingRate: "desc" },
-    include: { _count: { select: { reviews: true } } },
+  let movies = MOCK_MOVIES.filter((m) => {
+    if (type === "nowShowing") return m.isNowShowing;
+    if (type === "comingSoon") return m.isComingSoon;
+    return true;
+  });
+
+  if (genre) {
+    movies = movies.filter((m) => m.genre?.includes(genre));
+  }
+
+  movies = [...movies].sort((a, b) => {
+    if (sort === "score") return b.avgScore - a.avgScore;
+    if (sort === "release")
+      return (b.releaseDate?.getTime() ?? 0) - (a.releaseDate?.getTime() ?? 0);
+    return b.bookingRate - a.bookingRate;
   });
 
   return (

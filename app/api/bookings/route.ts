@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { auth } from "@/lib/auth";
+import { MOCK_BOOKINGS, MOCK_SCREENINGS, generateSeats } from "@/lib/mock-data";
 import { z } from "zod";
 
 const bookingSchema = z.object({
@@ -15,58 +14,72 @@ const bookingSchema = z.object({
   paymentMethod: z.string().optional(),
 });
 
-export async function POST(request: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
-  }
+// Mock 유저 (로그인 없이 사용)
+const MOCK_USER_ID = "user-01";
 
+export async function POST(request: Request) {
   try {
     const body = await request.json();
     const data = bookingSchema.parse(body);
 
-    // 이미 예약된 좌석인지 확인
-    const existingBookings = await prisma.bookingSeat.findMany({
-      where: {
-        seatId: { in: data.seats.map((s) => s.seatId) },
-        booking: { screeningId: data.screeningId, status: { in: ["PENDING", "CONFIRMED"] } },
-      },
-    });
+    const screening = MOCK_SCREENINGS.find((s) => s.id === data.screeningId);
+    if (!screening) {
+      return NextResponse.json({ error: "상영 정보를 찾을 수 없습니다." }, { status: 404 });
+    }
 
-    if (existingBookings.length > 0) {
+    // 이미 예약된 좌석 확인
+    const takenSeatIds = new Set(
+      MOCK_BOOKINGS.filter(
+        (b) =>
+          b.screeningId === data.screeningId &&
+          (b.status === "PENDING" || b.status === "CONFIRMED")
+      ).flatMap((b) => b.bookingSeats.map((bs) => bs.seatId))
+    );
+
+    const conflict = data.seats.some((s) => takenSeatIds.has(s.seatId));
+    if (conflict) {
       return NextResponse.json(
         { error: "이미 예약된 좌석이 포함되어 있습니다." },
         { status: 409 }
       );
     }
 
+    const allSeats = generateSeats(screening.hallId);
     const totalPrice = data.seats.reduce((sum, s) => sum + s.price, 0);
 
-    const booking = await prisma.booking.create({
-      data: {
-        userId: session.user.id,
-        screeningId: data.screeningId,
-        totalPrice,
-        status: "CONFIRMED",
-        paymentMethod: data.paymentMethod,
-        bookingSeats: {
-          create: data.seats.map((s) => ({
-            seatId: s.seatId,
-            ticketType: s.ticketType,
-            price: s.price,
-          })),
-        },
-      },
-      include: {
-        bookingSeats: { include: { seat: true } },
-        screening: {
-          include: {
-            movie: true,
-            hall: { include: { theater: true } },
+    const now = new Date();
+    const bookingId = `booking-${Date.now()}`;
+    const bookingNumber = `KGV${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+    const booking = {
+      id: bookingId,
+      bookingNumber,
+      userId: MOCK_USER_ID,
+      screeningId: data.screeningId,
+      totalPrice,
+      status: "CONFIRMED",
+      paymentMethod: data.paymentMethod,
+      bookedAt: now,
+      updatedAt: now,
+      screening,
+      bookingSeats: data.seats.map((s, i) => {
+        const seatInfo = allSeats.find((seat) => seat.id === s.seatId);
+        return {
+          id: `bs-${bookingId}-${i}`,
+          bookingId,
+          seatId: s.seatId,
+          ticketType: s.ticketType,
+          price: s.price,
+          seat: {
+            row: seatInfo?.row ?? "?",
+            number: seatInfo?.number ?? 0,
+            seatType: seatInfo?.seatType ?? "STANDARD",
           },
-        },
-      },
-    });
+        };
+      }),
+    };
+
+    MOCK_BOOKINGS.push(booking);
 
     return NextResponse.json({ success: true, booking }, { status: 201 });
   } catch (error) {
