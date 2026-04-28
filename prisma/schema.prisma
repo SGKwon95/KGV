@@ -1,0 +1,264 @@
+// ================================
+// KGV - Prisma Schema (MySQL)
+// ================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ================================
+// 사용자
+// ================================
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  nickname      String?   @unique
+  phone         String?
+  password      String?   // OAuth 로그인 시 null
+  image         String?
+  role          UserRole  @default(USER)
+  point         Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  bookings      Booking[]
+  reviews       Review[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+// ================================
+// 영화
+// ================================
+model Movie {
+  id            String      @id @default(cuid())
+  title         String
+  titleEn       String?
+  synopsis      String?     @db.Text
+  director      String?
+  cast          String?     @db.Text  // JSON string
+  genre         String?     // 콤마 구분
+  rating        MovieRating @default(ALL)
+  runtime       Int?        // 분
+  releaseDate   DateTime?
+  posterUrl     String?
+  backdropUrl   String?
+  trailerUrl    String?
+  tmdbId        String?     @unique
+  isNowShowing  Boolean     @default(false)
+  isComingSoon  Boolean     @default(false)
+  avgScore      Float       @default(0)
+  bookingRate   Float       @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  screenings    Screening[]
+  reviews       Review[]
+
+  @@map("movies")
+}
+
+// ================================
+// 극장 / 상영관
+// ================================
+model Theater {
+  id        String   @id @default(cuid())
+  name      String
+  region    String   // 서울, 경기, 부산 등
+  address   String?
+  phone     String?
+  latitude  Float?
+  longitude Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  halls     Hall[]
+
+  @@map("theaters")
+}
+
+model Hall {
+  id         String   @id @default(cuid())
+  theaterId  String
+  name       String   // 1관, 2관, IMAX관 등
+  hallType   HallType @default(STANDARD)
+  totalSeats Int
+
+  theater    Theater     @relation(fields: [theaterId], references: [id], onDelete: Cascade)
+  seats      Seat[]
+  screenings Screening[]
+
+  @@map("halls")
+}
+
+model Seat {
+  id       String    @id @default(cuid())
+  hallId   String
+  row      String    // A, B, C ...
+  number   Int       // 1, 2, 3 ...
+  seatType SeatType  @default(STANDARD)
+
+  hall            Hall            @relation(fields: [hallId], references: [id], onDelete: Cascade)
+  bookingSeats    BookingSeat[]
+
+  @@unique([hallId, row, number])
+  @@map("seats")
+}
+
+// ================================
+// 상영 일정
+// ================================
+model Screening {
+  id          String          @id @default(cuid())
+  movieId     String
+  hallId      String
+  startTime   DateTime
+  endTime     DateTime
+  price       Int             // 기본 가격 (원)
+  status      ScreeningStatus @default(SCHEDULED)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  movie       Movie           @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  hall        Hall            @relation(fields: [hallId], references: [id], onDelete: Cascade)
+  bookings    Booking[]
+
+  @@map("screenings")
+}
+
+// ================================
+// 예매
+// ================================
+model Booking {
+  id            String        @id @default(cuid())
+  bookingNumber String        @unique @default(cuid())
+  userId        String
+  screeningId   String
+  totalPrice    Int
+  status        BookingStatus @default(PENDING)
+  paymentMethod String?
+  paymentId     String?
+  bookedAt      DateTime      @default(now())
+  cancelledAt   DateTime?
+  updatedAt     DateTime      @updatedAt
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  screening     Screening     @relation(fields: [screeningId], references: [id])
+  bookingSeats  BookingSeat[]
+
+  @@map("bookings")
+}
+
+model BookingSeat {
+  id         String    @id @default(cuid())
+  bookingId  String
+  seatId     String
+  ticketType TicketType @default(ADULT)
+  price      Int
+
+  booking    Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  seat       Seat      @relation(fields: [seatId], references: [id])
+
+  @@unique([bookingId, seatId])
+  @@map("booking_seats")
+}
+
+// ================================
+// 리뷰
+// ================================
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  movieId   String
+  score     Float    // 0.5 ~ 5.0
+  content   String?  @db.Text
+  isSpoiler Boolean  @default(false)
+  likes     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movieId])
+  @@map("reviews")
+}
+
+// ================================
+// Enums
+// ================================
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum MovieRating {
+  ALL       // 전체 관람가
+  TWELVE    // 12세 이상
+  FIFTEEN   // 15세 이상
+  ADULT     // 청소년 관람불가
+}
+
+enum HallType {
+  STANDARD
+  IMAX
+  FOUR_DX   // 4DX
+  SCREEN_X
+  PREMIUM
+}
+
+enum SeatType {
+  STANDARD
+  PREMIUM
+  COUPLE
+  WHEELCHAIR
+}
+
+enum ScreeningStatus {
+  SCHEDULED
+  ONGOING
+  ENDED
+  CANCELLED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  REFUNDED
+}
+
+enum TicketType {
+  ADULT
+  TEEN
+  CHILD
+  SENIOR
+  DISABLED
+}
