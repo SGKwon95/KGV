@@ -1,16 +1,72 @@
-import {
-  PrismaClient,
-  MovieRating,
-  HallType,
-  SeatType,
-  ScreeningStatus,
-} from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log("🌱 Seeding database...");
+
+  // ================================
+  // 공통코드 (CommonCode)
+  // ================================
+  const commonCodes = [
+    // USER_ROLE
+    { groupCode: "USER_ROLE", code: "USER",       label: "일반사용자",          sortOrder: 1 },
+    { groupCode: "USER_ROLE", code: "ADMIN",      label: "관리자",              sortOrder: 2 },
+
+    // USER_STATUS
+    { groupCode: "USER_STATUS", code: "ACTIVE",    label: "활성",   sortOrder: 1 },
+    { groupCode: "USER_STATUS", code: "INACTIVE",  label: "비활성", sortOrder: 2 },
+    { groupCode: "USER_STATUS", code: "SUSPENDED", label: "정지",   sortOrder: 3 },
+
+    // MOVIE_RATING
+    { groupCode: "MOVIE_RATING", code: "ALL",     label: "전체관람가",        sortOrder: 1 },
+    { groupCode: "MOVIE_RATING", code: "TWELVE",  label: "12세이상관람가",    sortOrder: 2 },
+    { groupCode: "MOVIE_RATING", code: "FIFTEEN", label: "15세이상관람가",    sortOrder: 3 },
+    { groupCode: "MOVIE_RATING", code: "ADULT",   label: "청소년관람불가",    sortOrder: 4 },
+
+    // HALL_TYPE (extraValue = 할증료)
+    { groupCode: "HALL_TYPE", code: "STANDARD", label: "일반관",     extraValue: "0",    sortOrder: 1 },
+    { groupCode: "HALL_TYPE", code: "IMAX",     label: "IMAX관",     extraValue: "5000", sortOrder: 2 },
+    { groupCode: "HALL_TYPE", code: "FOUR_DX",  label: "4DX관",      extraValue: "6000", sortOrder: 3 },
+    { groupCode: "HALL_TYPE", code: "SCREEN_X", label: "ScreenX관",  extraValue: "4000", sortOrder: 4 },
+    { groupCode: "HALL_TYPE", code: "PREMIUM",  label: "프리미엄관", extraValue: "3000", sortOrder: 5 },
+
+    // SEAT_TYPE
+    { groupCode: "SEAT_TYPE", code: "STANDARD",   label: "일반석",   sortOrder: 1 },
+    { groupCode: "SEAT_TYPE", code: "PREMIUM",    label: "프리미엄석", sortOrder: 2 },
+    { groupCode: "SEAT_TYPE", code: "COUPLE",     label: "커플석",   sortOrder: 3 },
+    { groupCode: "SEAT_TYPE", code: "WHEELCHAIR", label: "장애인석", sortOrder: 4 },
+
+    // SCREENING_STATUS
+    { groupCode: "SCREENING_STATUS", code: "SCHEDULED", label: "상영예정", sortOrder: 1 },
+    { groupCode: "SCREENING_STATUS", code: "ONGOING",   label: "상영중",   sortOrder: 2 },
+    { groupCode: "SCREENING_STATUS", code: "ENDED",     label: "상영종료", sortOrder: 3 },
+    { groupCode: "SCREENING_STATUS", code: "CANCELLED", label: "취소",     sortOrder: 4 },
+
+    // BOOKING_STATUS
+    { groupCode: "BOOKING_STATUS", code: "PENDING",   label: "결제대기",  sortOrder: 1 },
+    { groupCode: "BOOKING_STATUS", code: "CONFIRMED", label: "예매완료",  sortOrder: 2 },
+    { groupCode: "BOOKING_STATUS", code: "CANCELLED", label: "취소됨",    sortOrder: 3 },
+    { groupCode: "BOOKING_STATUS", code: "REFUNDED",  label: "환불완료",  sortOrder: 4 },
+
+    // TICKET_TYPE (extraValue = 기본 가격)
+    { groupCode: "TICKET_TYPE", code: "ADULT",    label: "성인",              extraValue: "15000", sortOrder: 1 },
+    { groupCode: "TICKET_TYPE", code: "TEEN",     label: "청소년",            extraValue: "12000", sortOrder: 2 },
+    { groupCode: "TICKET_TYPE", code: "CHILD",    label: "어린이",            extraValue: "8000",  sortOrder: 3 },
+    { groupCode: "TICKET_TYPE", code: "SENIOR",   label: "경로",              extraValue: "9000",  sortOrder: 4 },
+    { groupCode: "TICKET_TYPE", code: "DISABLED", label: "장애인/국가유공자", extraValue: "7000",  sortOrder: 5 },
+  ];
+
+  for (const item of commonCodes) {
+    await prisma.commonCode.upsert({
+      where: { groupCode_code: { groupCode: item.groupCode, code: item.code } },
+      update: { label: item.label, extraValue: item.extraValue ?? null, sortOrder: item.sortOrder },
+      create: { ...item },
+    });
+  }
+
+  console.log(`✅ CommonCode ${commonCodes.length}개 시딩 완료`);
 
   // ================================
   // 테스트 유저
@@ -28,6 +84,8 @@ async function main() {
       nickname: "영화광",
       phone: "010-1234-5678",
       point: 5000,
+      role: "USER",
+      userStatus: "ACTIVE",
     },
   });
 
@@ -40,6 +98,8 @@ async function main() {
       email: "test@kgv.com",
       password: hashedPassword,
       point: 0,
+      role: "USER",
+      userStatus: "ACTIVE",
     },
   });
 
@@ -94,13 +154,13 @@ async function main() {
   }
 
   const halls = [
-    { id: "hall-01", theaterId: "theater-01", name: "1관", hallType: HallType.STANDARD, totalSeats: 100 },
-    { id: "hall-02", theaterId: "theater-01", name: "2관", hallType: HallType.STANDARD, totalSeats: 100 },
-    { id: "hall-03", theaterId: "theater-01", name: "IMAX관", hallType: HallType.IMAX, totalSeats: 100 },
-    { id: "hall-04", theaterId: "theater-02", name: "1관", hallType: HallType.STANDARD, totalSeats: 100 },
-    { id: "hall-05", theaterId: "theater-02", name: "2관", hallType: HallType.STANDARD, totalSeats: 100 },
-    { id: "hall-06", theaterId: "theater-03", name: "1관", hallType: HallType.STANDARD, totalSeats: 100 },
-    { id: "hall-07", theaterId: "theater-04", name: "1관", hallType: HallType.STANDARD, totalSeats: 100 },
+    { id: "hall-01", theaterId: "theater-01", name: "1관",    hallType: "STANDARD", totalSeats: 100 },
+    { id: "hall-02", theaterId: "theater-01", name: "2관",    hallType: "STANDARD", totalSeats: 100 },
+    { id: "hall-03", theaterId: "theater-01", name: "IMAX관", hallType: "IMAX",     totalSeats: 100 },
+    { id: "hall-04", theaterId: "theater-02", name: "1관",    hallType: "STANDARD", totalSeats: 100 },
+    { id: "hall-05", theaterId: "theater-02", name: "2관",    hallType: "STANDARD", totalSeats: 100 },
+    { id: "hall-06", theaterId: "theater-03", name: "1관",    hallType: "STANDARD", totalSeats: 100 },
+    { id: "hall-07", theaterId: "theater-04", name: "1관",    hallType: "STANDARD", totalSeats: 100 },
   ];
 
   for (const hall of halls) {
@@ -118,7 +178,7 @@ async function main() {
         await prisma.seat.upsert({
           where: { hallId_row_number: { hallId: hall.id, row, number: num } },
           update: {},
-          create: { hallId: hall.id, row, number: num, seatType: SeatType.STANDARD },
+          create: { hallId: hall.id, row, number: num, seatType: "STANDARD" },
         });
       }
     }
@@ -136,7 +196,7 @@ async function main() {
       director: "필 로드, 크리스토퍼 밀러",
       cast: '["라이언 고슬링", "산드라 휠러"]',
       genre: "SF,드라마,스릴러",
-      rating: MovieRating.TWELVE,
+      rating: "TWELVE",
       runtime: 156,
       releaseDate: new Date("2026-03-18"),
       posterUrl: "https://image.cine21.com/resize/cine21/poster/2026/0227/12_33_51__69a1109f40cba[X280,400].jpg",
@@ -152,7 +212,7 @@ async function main() {
       director: "아론 호바스, 마이클 젤레닉",
       cast: '["크리스 프랫", "안야 테일러 조이", "잭 블랙"]',
       genre: "애니메이션,어드벤처,코미디",
-      rating: MovieRating.ALL,
+      rating: "ALL",
       runtime: 98,
       releaseDate: new Date("2026-04-29"),
       posterUrl: "https://image.cine21.com/resize/cine21/poster/2026/0327/62796_69c648d222c08[X280,400].jpg",
@@ -167,7 +227,7 @@ async function main() {
       director: "이상민",
       cast: '["김혜윤", "이종원", "김준한"]',
       genre: "공포,미스터리",
-      rating: MovieRating.FIFTEEN,
+      rating: "FIFTEEN",
       runtime: 95,
       releaseDate: new Date("2026-04-08"),
       posterUrl: "https://image.cine21.com/resize/cine21/poster/2026/0317/09_48_34__69b8a4e27933e[X280,400].jpg",
@@ -183,7 +243,7 @@ async function main() {
       director: "데이비드 프랭클",
       cast: '["메릴 스트립", "앤 해서웨이", "에밀리 블런트"]',
       genre: "코미디,드라마",
-      rating: MovieRating.TWELVE,
+      rating: "TWELVE",
       runtime: 118,
       releaseDate: new Date("2026-04-29"),
       posterUrl: "https://image.cine21.com/resize/cine21/poster/2026/0429/17_10_31__69f1bcf7d8992[X280,400].jpg",
@@ -199,7 +259,7 @@ async function main() {
       director: "하시모토 마사카즈",
       cast: '["짱구", "맹구", "철수", "유리", "훈이"]',
       genre: "애니메이션,코미디,가족",
-      rating: MovieRating.ALL,
+      rating: "ALL",
       runtime: 105,
       releaseDate: new Date("2025-12-24"),
       posterUrl: "https://image.cine21.com/resize/cine21/poster/2025/1224/14_14_56__694b76d0bdec4[X280,400].jpg",
@@ -220,9 +280,6 @@ async function main() {
   // ================================
   // 상영 일정 (향후 7일)
   // ================================
-  const nowShowingMovies = movies.filter((m) => m.isNowShowing);
-
-  // 상영 스케줄: [hallId, movieId, price]
   const hallMovieMap = [
     { hallId: "hall-01", movieId: "movie-07", price: 15000 },
     { hallId: "hall-02", movieId: "movie-10", price: 15000 },
@@ -233,7 +290,7 @@ async function main() {
     { hallId: "hall-07", movieId: "movie-10", price: 15000 },
   ];
 
-  const startTimes = [10, 13, 16, 19]; // 상영 시작 시간
+  const startTimes = [10, 13, 16, 19];
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -263,7 +320,7 @@ async function main() {
             startTime,
             endTime,
             price,
-            status: ScreeningStatus.SCHEDULED,
+            status: "SCHEDULED",
           },
         });
       }

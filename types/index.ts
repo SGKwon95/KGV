@@ -12,14 +12,22 @@ export type {
   Booking,
   BookingSeat,
   Review,
-  UserRole,
-  MovieRating,
-  HallType,
-  SeatType,
-  ScreeningStatus,
-  BookingStatus,
-  TicketType,
+  CommonCode,
 } from "@prisma/client";
+
+// ================================
+// 공통코드 그룹 상수
+// ================================
+export const CODE_GROUP = {
+  USER_ROLE:         "USER_ROLE",
+  USER_STATUS:       "USER_STATUS",
+  MOVIE_RATING:      "MOVIE_RATING",
+  HALL_TYPE:         "HALL_TYPE",
+  SEAT_TYPE:         "SEAT_TYPE",
+  SCREENING_STATUS:  "SCREENING_STATUS",
+  BOOKING_STATUS:    "BOOKING_STATUS",
+  TICKET_TYPE:       "TICKET_TYPE",
+} as const;
 
 // ================================
 // API 응답 타입

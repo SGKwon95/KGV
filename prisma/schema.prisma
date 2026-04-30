@@ -12,23 +12,43 @@ datasource db {
 }
 
 // ================================
+// 공통코드
+// ================================
+model CommonCode {
+  id          String   @id @default(cuid())
+  groupCode   String   // 그룹 코드 (USER_ROLE, USER_STATUS, MOVIE_RATING, HALL_TYPE, SEAT_TYPE, SCREENING_STATUS, BOOKING_STATUS, TICKET_TYPE)
+  code        String   // 코드 값 (ADULT, STANDARD, CONFIRMED, ...)
+  label       String   // 한국어 라벨
+  description String?  // 설명
+  extraValue  String?  // 추가 값 (가격, 할증료 등 JSON 또는 단순 값)
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([groupCode, code])
+  @@map("common_codes")
+}
+
+// ================================
 // 사용자
 // ================================
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String?
-  nickname      String?   @unique
-  phone         String?
-  password      String
-  image         String?
-  role          UserRole  @default(USER)
-  point         Int       @default(0)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String?
+  nickname    String?  @unique
+  phone       String?
+  password    String
+  image       String?
+  role        String   @default("USER")       // CommonCode: USER_ROLE
+  userStatus  String   @default("ACTIVE")     // CommonCode: USER_STATUS
+  point       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  bookings      Booking[]
-  reviews       Review[]
+  bookings    Booking[]
+  reviews     Review[]
 
   @@map("users")
 }
@@ -37,26 +57,26 @@ model User {
 // 영화
 // ================================
 model Movie {
-  id            String      @id @default(cuid())
+  id            String    @id @default(cuid())
   title         String
   titleEn       String?
   synopsis      String?
   director      String?
-  cast          String?               // JSON string
-  genre         String?     // 콤마 구분
-  rating        MovieRating @default(ALL)
-  runtime       Int?        // 분
+  cast          String?   // JSON string
+  genre         String?   // 콤마 구분
+  rating        String    @default("ALL")     // CommonCode: MOVIE_RATING
+  runtime       Int?      // 분
   releaseDate   DateTime?
   posterUrl     String?
   backdropUrl   String?
   trailerUrl    String?
-  tmdbId        String?     @unique
-  isNowShowing  Boolean     @default(false)
-  isComingSoon  Boolean     @default(false)
-  avgScore      Float       @default(0)
-  bookingRate   Float       @default(0)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  tmdbId        String?   @unique
+  isNowShowing  Boolean   @default(false)
+  isComingSoon  Boolean   @default(false)
+  avgScore      Float     @default(0)
+  bookingRate   Float     @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   screenings    Screening[]
   reviews       Review[]
@@ -87,7 +107,7 @@ model Hall {
   id         String   @id @default(cuid())
   theaterId  String
   name       String   // 1관, 2관, IMAX관 등
-  hallType   HallType @default(STANDARD)
+  hallType   String   @default("STANDARD")   // CommonCode: HALL_TYPE
   totalSeats Int
 
   theater    Theater     @relation(fields: [theaterId], references: [id], onDelete: Cascade)
@@ -98,14 +118,14 @@ model Hall {
 }
 
 model Seat {
-  id       String    @id @default(cuid())
+  id       String @id @default(cuid())
   hallId   String
-  row      String    // A, B, C ...
-  number   Int       // 1, 2, 3 ...
-  seatType SeatType  @default(STANDARD)
+  row      String // A, B, C ...
+  number   Int    // 1, 2, 3 ...
+  seatType String @default("STANDARD")       // CommonCode: SEAT_TYPE
 
-  hall            Hall            @relation(fields: [hallId], references: [id], onDelete: Cascade)
-  bookingSeats    BookingSeat[]
+  hall         Hall          @relation(fields: [hallId], references: [id], onDelete: Cascade)
+  bookingSeats BookingSeat[]
 
   @@unique([hallId, row, number])
   @@map("seats")
@@ -115,19 +135,19 @@ model Seat {
 // 상영 일정
 // ================================
 model Screening {
-  id          String          @id @default(cuid())
-  movieId     String
-  hallId      String
-  startTime   DateTime
-  endTime     DateTime
-  price       Int             // 기본 가격 (원)
-  status      ScreeningStatus @default(SCHEDULED)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id        String   @id @default(cuid())
+  movieId   String
+  hallId    String
+  startTime DateTime
+  endTime   DateTime
+  price     Int      // 기본 가격 (원)
+  status    String   @default("SCHEDULED")   // CommonCode: SCREENING_STATUS
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  movie       Movie           @relation(fields: [movieId], references: [id], onDelete: Cascade)
-  hall        Hall            @relation(fields: [hallId], references: [id], onDelete: Cascade)
-  bookings    Booking[]
+  movie    Movie     @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  hall     Hall      @relation(fields: [hallId], references: [id], onDelete: Cascade)
+  bookings Booking[]
 
   @@map("screenings")
 }
@@ -136,34 +156,34 @@ model Screening {
 // 예매
 // ================================
 model Booking {
-  id            String        @id @default(cuid())
-  bookingNumber String        @unique @default(cuid())
+  id            String    @id @default(cuid())
+  bookingNumber String    @unique @default(cuid())
   userId        String
   screeningId   String
   totalPrice    Int
-  status        BookingStatus @default(PENDING)
+  status        String    @default("PENDING")    // CommonCode: BOOKING_STATUS
   paymentMethod String?
   paymentId     String?
-  bookedAt      DateTime      @default(now())
+  bookedAt      DateTime  @default(now())
   cancelledAt   DateTime?
-  updatedAt     DateTime      @updatedAt
+  updatedAt     DateTime  @updatedAt
 
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  screening     Screening     @relation(fields: [screeningId], references: [id])
-  bookingSeats  BookingSeat[]
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  screening    Screening     @relation(fields: [screeningId], references: [id])
+  bookingSeats BookingSeat[]
 
   @@map("bookings")
 }
 
 model BookingSeat {
-  id         String    @id @default(cuid())
+  id         String @id @default(cuid())
   bookingId  String
   seatId     String
-  ticketType TicketType @default(ADULT)
+  ticketType String @default("ADULT")           // CommonCode: TICKET_TYPE
   price      Int
 
-  booking    Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  seat       Seat      @relation(fields: [seatId], references: [id])
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  seat    Seat    @relation(fields: [seatId], references: [id])
 
   @@unique([bookingId, seatId])
   @@map("booking_seats")
@@ -183,61 +203,9 @@ model Review {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
 
   @@unique([userId, movieId])
   @@map("reviews")
-}
-
-// ================================
-// Enums
-// ================================
-enum UserRole {
-  USER
-  ADMIN
-}
-
-enum MovieRating {
-  ALL       // 전체 관람가
-  TWELVE    // 12세 이상
-  FIFTEEN   // 15세 이상
-  ADULT     // 청소년 관람불가
-}
-
-enum HallType {
-  STANDARD
-  IMAX
-  FOUR_DX   // 4DX
-  SCREEN_X
-  PREMIUM
-}
-
-enum SeatType {
-  STANDARD
-  PREMIUM
-  COUPLE
-  WHEELCHAIR
-}
-
-enum ScreeningStatus {
-  SCHEDULED
-  ONGOING
-  ENDED
-  CANCELLED
-}
-
-enum BookingStatus {
-  PENDING
-  CONFIRMED
-  CANCELLED
-  REFUNDED
-}
-
-enum TicketType {
-  ADULT
-  TEEN
-  CHILD
-  SENIOR
-  DISABLED
 }
