@@ -9,6 +9,10 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "image.cine21.com",
+      },
+      {
+        protocol: "https",
         hostname: "*.amazonaws.com",
       },
     ],
