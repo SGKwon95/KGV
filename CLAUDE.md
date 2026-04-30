@@ -17,13 +17,25 @@ npm run db:studio    # Prisma Studio (DB GUI)
 npm run db:seed      # 샘플 데이터 삽입 (prisma/seed.ts)
 ```
 
-## 현재 개발 모드: DB 없는 Mock 모드
+## 현재 개발 모드: Prisma DB 모드
 
-**DB 연결 없이 바로 실행 가능하다.** 모든 데이터는 `lib/mock-data.ts`에서 인메모리로 관리된다.
+**MySQL DB 연결이 필요하다.** 모든 데이터는 Prisma를 통해 DB에서 관리된다.
 
-- 테스트 로그인: `hong@kgv.com` / `password123`
-- 예매 데이터는 서버 재시작 시 초기화됨 (`MOCK_BOOKINGS` 배열)
-- DB 연결을 원할 경우 `.env.local`의 `DATABASE_URL`을 설정하고 페이지/API에서 `MOCK_*` 대신 `prisma`로 교체
+### DB 초기 설정 절차
+
+```bash
+# 1. .env.local에 DATABASE_URL 설정 (mysql://user:password@host:port/db_name)
+# 2. DB 스키마 반영
+npm run db:push
+# 3. 샘플 데이터 삽입
+npm run db:seed
+# 4. 개발 서버 실행
+npm run dev
+```
+
+- 테스트 계정: `hong@kgv.com` / `password123`
+- 예매는 로그인 필수 (`/api/bookings`에서 세션 확인)
+- 마이페이지는 로그인하지 않으면 `/login`으로 리다이렉트됨
 
 ## 아키텍처
 
@@ -51,13 +63,9 @@ app/
 
 ### 데이터 흐름
 
-**Mock 모드 (현재):**
-- 서버 컴포넌트 → `lib/mock-data.ts`의 `MOCK_*` 상수 직접 참조
-- API 라우트 → 동일한 `MOCK_*` 데이터 반환
-- 예매 생성 → `MOCK_BOOKINGS` 배열에 push (인메모리)
-
-**DB 모드 (전환 시):**
 - 서버 컴포넌트 → `lib/db.ts`의 `prisma` 클라이언트 사용
+- API 라우트 → 동일한 `prisma` 클라이언트로 DB 조회/쓰기
+- 예매 생성 → `prisma.booking.create()` (DB에 영구 저장)
 - `lib/db.ts`는 싱글턴 패턴으로 전역 `PrismaClient` 관리
 
 ### 상태 관리

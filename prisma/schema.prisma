@@ -1,5 +1,5 @@
 // ================================
-// KGV - Prisma Schema (MySQL)
+// KGV - Prisma Schema (PostgreSQL / Supabase)
 // ================================
 
 generator client {
@@ -7,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -40,12 +40,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -61,9 +61,9 @@ model Movie {
   id            String      @id @default(cuid())
   title         String
   titleEn       String?
-  synopsis      String?     @db.Text
+  synopsis      String?
   director      String?
-  cast          String?     @db.Text  // JSON string
+  cast          String?               // JSON string
   genre         String?     // 콤마 구분
   rating        MovieRating @default(ALL)
   runtime       Int?        // 분
@@ -198,7 +198,7 @@ model Review {
   userId    String
   movieId   String
   score     Float    // 0.5 ~ 5.0
-  content   String?  @db.Text
+  content   String?
   isSpoiler Boolean  @default(false)
   likes     Int      @default(0)
   createdAt DateTime @default(now())

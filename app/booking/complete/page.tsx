@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { MOCK_BOOKINGS } from "@/lib/mock-data";
+import { prisma } from "@/lib/db";
 import { formatDate, formatPrice } from "@/lib/utils";
 import { CheckCircle } from "lucide-react";
 
@@ -17,7 +17,21 @@ export default async function BookingCompletePage({ searchParams }: PageProps) {
   const { bookingId } = await searchParams;
   if (!bookingId) notFound();
 
-  const booking = MOCK_BOOKINGS.find((b) => b.id === bookingId);
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    include: {
+      screening: {
+        include: {
+          movie: true,
+          hall: { include: { theater: true } },
+        },
+      },
+      bookingSeats: {
+        include: { seat: true },
+      },
+    },
+  });
+
   if (!booking) notFound();
 
   const { screening, bookingSeats } = booking;

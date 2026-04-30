@@ -1,11 +1,7 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-
-// Mock 유저 (DB 없이 테스트용)
-const MOCK_USERS = [
-  { id: "user-01", name: "홍길동", email: "hong@kgv.com", password: "password123" },
-  { id: "user-02", name: "테스트유저", email: "test@kgv.com", password: "password123" },
-];
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/db";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -18,13 +14,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const user = MOCK_USERS.find(
-          (u) =>
-            u.email === credentials.email &&
-            u.password === credentials.password
-        );
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email as string },
+        });
 
-        if (!user) return null;
+        if (!user || !user.password) return null;
+
+        const isValid = await bcrypt.compare(
+          credentials.password as string,
+          user.password
+        );
+        if (!isValid) return null;
 
         return { id: user.id, name: user.name, email: user.email };
       },

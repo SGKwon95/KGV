@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import { BookingFlow } from "@/components/booking/BookingFlow";
-import { MOCK_MOVIES, MOCK_THEATERS } from "@/lib/mock-data";
+import { prisma } from "@/lib/db";
 
 export const metadata: Metadata = {
   title: "영화 예매",
@@ -15,26 +15,24 @@ interface PageProps {
 export default async function BookingPage({ searchParams }: PageProps) {
   const params = await searchParams;
 
-  const movies = MOCK_MOVIES.filter((m) => m.isNowShowing).map((m) => ({
-    id: m.id,
-    title: m.title,
-    rating: m.rating,
-    runtime: m.runtime,
-    posterUrl: m.posterUrl,
-  }));
-
-  const theaters = MOCK_THEATERS.map((t) => ({
-    id: t.id,
-    name: t.name,
-    region: t.region,
-  }));
+  const [movieRows, theaterRows] = await Promise.all([
+    prisma.movie.findMany({
+      where: { isNowShowing: true },
+      orderBy: { bookingRate: "desc" },
+      select: { id: true, title: true, rating: true, runtime: true, posterUrl: true },
+    }),
+    prisma.theater.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, region: true },
+    }),
+  ]);
 
   return (
     <div className="container-main py-10">
       <h1 className="section-title">영화 예매</h1>
       <BookingFlow
-        movies={movies}
-        theaters={theaters}
+        movies={movieRows}
+        theaters={theaterRows}
         initialMovieId={params.movieId}
         initialScreeningId={params.screeningId}
       />

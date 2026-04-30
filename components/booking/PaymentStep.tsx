@@ -43,6 +43,10 @@ export function PaymentStep({ screeningId, onBack }: PaymentStepProps) {
         }),
       });
 
+      if (res.status === 401) {
+        router.push("/login?redirect=/booking");
+        return;
+      }
       if (!res.ok) {
         const body = await res.json();
         throw new Error(body.error ?? "결제에 실패했습니다.");

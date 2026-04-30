@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { MOCK_MOVIES, MOCK_REVIEWS } from "@/lib/mock-data";
+import { prisma } from "@/lib/db";
 import { formatRuntime, formatDate, formatMovieRating, getMovieRatingColor, cn } from "@/lib/utils";
 import { ReviewSection } from "@/components/movie/ReviewSection";
 
@@ -14,17 +14,27 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const movie = MOCK_MOVIES.find((m) => m.id === id);
+  const movie = await prisma.movie.findUnique({ where: { id } });
   if (!movie) return { title: "영화를 찾을 수 없습니다" };
   return { title: movie.title, description: movie.synopsis ?? undefined };
 }
 
 export default async function MovieDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const movie = MOCK_MOVIES.find((m) => m.id === id);
-  if (!movie) notFound();
 
-  const reviews = MOCK_REVIEWS.filter((r) => r.movieId === id);
+  const [movie, reviews] = await Promise.all([
+    prisma.movie.findUnique({
+      where: { id },
+      include: { _count: { select: { reviews: true } } },
+    }),
+    prisma.review.findMany({
+      where: { movieId: id },
+      include: { user: { select: { name: true, image: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+
+  if (!movie) notFound();
 
   return (
     <div>

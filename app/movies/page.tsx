@@ -1,7 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
-import { MOCK_MOVIES } from "@/lib/mock-data";
+import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import { MovieCard } from "@/components/movie/MovieCard";
 import { MovieFilter } from "@/components/movie/MovieFilter";
 
@@ -20,21 +21,20 @@ export default async function MoviesPage({ searchParams }: PageProps) {
   const genre = params.genre;
   const sort = params.sort ?? "bookingRate";
 
-  let movies = MOCK_MOVIES.filter((m) => {
-    if (type === "nowShowing") return m.isNowShowing;
-    if (type === "comingSoon") return m.isComingSoon;
-    return true;
-  });
+  const where: Prisma.MovieWhereInput = {};
+  if (type === "nowShowing") where.isNowShowing = true;
+  else if (type === "comingSoon") where.isComingSoon = true;
+  if (genre) where.genre = { contains: genre };
 
-  if (genre) {
-    movies = movies.filter((m) => m.genre?.includes(genre));
-  }
+  const orderBy: Prisma.MovieOrderByWithRelationInput =
+    sort === "score" ? { avgScore: "desc" }
+    : sort === "release" ? { releaseDate: "desc" }
+    : { bookingRate: "desc" };
 
-  movies = [...movies].sort((a, b) => {
-    if (sort === "score") return b.avgScore - a.avgScore;
-    if (sort === "release")
-      return (b.releaseDate?.getTime() ?? 0) - (a.releaseDate?.getTime() ?? 0);
-    return b.bookingRate - a.bookingRate;
+  const movies = await prisma.movie.findMany({
+    where,
+    orderBy,
+    include: { _count: { select: { reviews: true } } },
   });
 
   return (
