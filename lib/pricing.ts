@@ -70,7 +70,7 @@ export async function calculateTicketPrice(
     getActivePolicy("HALL",      hallType),
     getActivePolicy("TIME",      timeCode),
     getActivePolicy("DAY",       dayCode),
-    seatType ? getActivePolicy("SEAT_TYPE", seatType) : Promise.resolve(null),
+    seatType ? getActivePolicy("SEAT", seatType) : Promise.resolve(null),
   ]);
 
   const basePrice     = ticketPolicy?.value ?? TICKET_PRICES[ticketType] ?? 15000;

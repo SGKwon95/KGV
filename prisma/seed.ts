@@ -95,7 +95,7 @@ async function main() {
     { id: "pp-day-weekend", policyGroup: "DAY", code: "weekend", label: "주말",   description: "토~일", value: 2000, sortOrder: 3 },
     { id: "pp-day-holiday", policyGroup: "DAY", code: "holiday", label: "공휴일",               value: 2000, sortOrder: 4 },
     // SEAT_TYPE
-    { id: "pp-seat-couple", policyGroup: "SEAT_TYPE", code: "COUPLE", label: "커플석", description: "커플석 추가 요금", value: 3000, sortOrder: 1 },
+    { id: "pp-seat-couple", policyGroup: "SEAT", code: "COUPLE", label: "커플석", description: "커플석 추가 요금", value: 2000, sortOrder: 2 },
   ];
 
   for (const item of pricePolicies) {
