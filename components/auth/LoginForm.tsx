@@ -34,7 +34,13 @@ export function LoginForm() {
     setError(null);
     try {
       await login(data.loginId, data.password);
-      router.push(callbackUrl);
+      const { getSession } = await import("next-auth/react");
+      const session = await getSession();
+      if (session?.user?.role === "ADMIN") {
+        router.push("/admin");
+      } else {
+        router.push(callbackUrl);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "로그인에 실패했습니다.");
     }
