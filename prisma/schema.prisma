@@ -40,6 +40,7 @@ model User {
   name        String?
   nickname    String?  @unique
   phone       String?
+  birthday    DateTime? @db.Date
   password    String
   image       String?
   role        String   @default("USER")       // CommonCode: USER_ROLE
@@ -123,6 +124,7 @@ model Seat {
   row      String // A, B, C ...
   number   Int    // 1, 2, 3 ...
   seatType String @default("STANDARD")       // CommonCode: SEAT_TYPE
+  isActive Boolean @default(true)
 
   hall         Hall          @relation(fields: [hallId], references: [id], onDelete: Cascade)
   bookingSeats BookingSeat[]

@@ -172,6 +172,7 @@ export interface PriceBreakdown {
   hallSurcharge: number;
   timeSurcharge: number;
   daySurcharge:  number;
+  seatSurcharge: number;
   totalPerSeat:  number;
 }
 

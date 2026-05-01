@@ -10,6 +10,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const ticketType  = searchParams.get("ticketType");
   const screeningId = searchParams.get("screeningId");
+  const seatType    = searchParams.get("seatType") ?? undefined;
 
   if (!ticketType || !screeningId) {
     return NextResponse.json({ error: "ticketType, screeningId는 필수입니다." }, { status: 400 });
@@ -29,7 +30,8 @@ export async function GET(request: Request) {
   const breakdown = await calculateTicketPrice(
     ticketType as TicketTypeOption,
     screening.hall.hallType,
-    screening.startTime
+    screening.startTime,
+    seatType
   );
 
   return NextResponse.json({ success: true, data: breakdown });

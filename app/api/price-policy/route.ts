@@ -3,9 +3,17 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 
-// GET /api/price-policy — 전체 정책 조회
-export async function GET() {
+// GET /api/price-policy — 정책 조회 (?group=TICKET&active=true 등 필터 가능)
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const group  = searchParams.get("group");
+  const active = searchParams.get("active");
+
   const policies = await prisma.pricePolicy.findMany({
+    where: {
+      ...(group  ? { policyGroup: group }  : {}),
+      ...(active === "true" ? { isActive: true } : {}),
+    },
     orderBy: [{ policyGroup: "asc" }, { sortOrder: "asc" }, { startAt: "desc" }],
   });
   return NextResponse.json({ success: true, data: policies });

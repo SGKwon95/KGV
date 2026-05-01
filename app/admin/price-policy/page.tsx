@@ -106,22 +106,34 @@ function PriceInput({
 
 // ─── DB 응답 → 로컬 state 변환 ───────────────────────────
 function mapPolicies(policies: PricePolicy[]) {
-  const tickets: TicketPolicy[] = DEFAULT_TICKETS.map((d) => {
-    const p = policies.find((x) => x.policyGroup === "TICKET" && x.code === d.type);
-    return p ? { id: p.id, type: p.code, label: p.label, price: p.value } : d;
-  });
-  const halls: HallPolicy[] = DEFAULT_HALLS.map((d) => {
-    const p = policies.find((x) => x.policyGroup === "HALL" && x.code === d.type);
-    return p ? { id: p.id, type: p.code, label: p.label, surcharge: p.value } : d;
-  });
-  const times: TimePolicy[] = DEFAULT_TIMES.map((d) => {
-    const p = policies.find((x) => x.policyGroup === "TIME" && x.code === d.id_code);
-    return p ? { id: p.id, id_code: p.code, label: p.label, description: p.description ?? d.description, surcharge: p.value } : d;
-  });
-  const days: DayPolicy[] = DEFAULT_DAYS.map((d) => {
-    const p = policies.find((x) => x.policyGroup === "DAY" && x.code === d.id_code);
-    return p ? { id: p.id, id_code: p.code, label: p.label, surcharge: p.value } : d;
-  });
+  const tickets: TicketPolicy[] = DEFAULT_TICKETS
+    .map((d) => {
+      const p = policies.find((x) => x.policyGroup === "TICKET" && x.code === d.type);
+      return p ? { id: p.id, type: p.code, label: p.label, price: p.value, _active: p.isActive } : { ...d, _active: true };
+    })
+    .filter((t) => t._active)
+    .map(({ _active: _, ...t }) => t);
+  const halls: HallPolicy[] = DEFAULT_HALLS
+    .map((d) => {
+      const p = policies.find((x) => x.policyGroup === "HALL" && x.code === d.type);
+      return p ? { id: p.id, type: p.code, label: p.label, surcharge: p.value, _active: p.isActive } : { ...d, _active: true };
+    })
+    .filter((h) => h._active)
+    .map(({ _active: _, ...h }) => h);
+  const times: TimePolicy[] = DEFAULT_TIMES
+    .map((d) => {
+      const p = policies.find((x) => x.policyGroup === "TIME" && x.code === d.id_code);
+      return p ? { id: p.id, id_code: p.code, label: p.label, description: p.description ?? d.description, surcharge: p.value, _active: p.isActive } : { ...d, _active: true };
+    })
+    .filter((t) => t._active)
+    .map(({ _active: _, ...t }) => t);
+  const days: DayPolicy[] = DEFAULT_DAYS
+    .map((d) => {
+      const p = policies.find((x) => x.policyGroup === "DAY" && x.code === d.id_code);
+      return p ? { id: p.id, id_code: p.code, label: p.label, surcharge: p.value, _active: p.isActive } : { ...d, _active: true };
+    })
+    .filter((d) => d._active)
+    .map(({ _active: _, ...d }) => d);
   return { tickets, halls, times, days };
 }
 

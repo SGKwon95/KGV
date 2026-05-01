@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { formatPrice, cn } from "@/lib/utils";
 import { ChevronLeft, CreditCard, Smartphone } from "lucide-react";
 import { useBookingStore } from "@/hooks/useBooking";
 import { TICKET_PRICES, TICKET_TYPE_LABELS, type TicketTypeOption } from "@/types";
+
+type TicketPolicy = { code: string; label: string; value: number };
 
 const PAYMENT_METHODS = [
   { id: "card",   label: "신용/체크카드", icon: CreditCard  },
@@ -24,6 +26,22 @@ export function PaymentStep({ screeningId, onBack }: PaymentStepProps) {
   const [paymentMethod, setPaymentMethod] = useState("card");
   const [loading, setLoading]   = useState(false);
   const [error,   setError]     = useState<string | null>(null);
+  const [ticketPolicies, setTicketPolicies] = useState<TicketPolicy[]>([]);
+
+  useEffect(() => {
+    fetch("/api/price-policy?group=TICKET&active=true")
+      .then((r) => r.json())
+      .then(({ data }) => setTicketPolicies(data ?? []))
+      .catch(() => {
+        setTicketPolicies(
+          Object.entries(TICKET_TYPE_LABELS).map(([code, label]) => ({
+            code,
+            label,
+            value: TICKET_PRICES[code as TicketTypeOption],
+          }))
+        );
+      });
+  }, []);
 
   const handleTicketTypeChange = async (seatId: string, newType: TicketTypeOption) => {
     // 먼저 fallback 가격으로 즉시 업데이트 (UI 반응성)
@@ -94,9 +112,10 @@ export function PaymentStep({ screeningId, onBack }: PaymentStepProps) {
                 value={seat.ticketType}
                 onChange={(e) => handleTicketTypeChange(seat.seatId, e.target.value as TicketTypeOption)}
                 className="bg-kgv-dark text-white text-xs px-2 py-1 rounded border border-kgv-gray focus:border-kgv-red outline-none"
+                disabled={ticketPolicies.length === 0}
               >
-                {Object.entries(TICKET_TYPE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
+                {ticketPolicies.map((p) => (
+                  <option key={p.code} value={p.code}>{p.label}</option>
                 ))}
               </select>
               <span className="text-kgv-red text-sm font-medium">{formatPrice(seat.price)}</span>

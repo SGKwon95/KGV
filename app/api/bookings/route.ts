@@ -33,6 +33,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "상영 정보를 찾을 수 없습니다." }, { status: 404 });
     }
 
+    // 비활성 좌석 확인
+    const inactiveSeat = await prisma.seat.findFirst({
+      where: {
+        id: { in: data.seats.map((s) => s.seatId) },
+        isActive: false,
+      },
+    });
+    if (inactiveSeat) {
+      return NextResponse.json(
+        { error: "예매할 수 없는 좌석이 포함되어 있습니다." },
+        { status: 400 }
+      );
+    }
+
     // 이미 예약된 좌석 확인
     const conflicting = await prisma.bookingSeat.findFirst({
       where: {
@@ -51,8 +65,15 @@ export async function POST(request: Request) {
     }
 
     // 서버 사이드 가격 계산 (클라이언트 값 신뢰 안 함)
+    const seatRecords = await prisma.seat.findMany({
+      where: { id: { in: data.seats.map((s) => s.seatId) } },
+      select: { id: true, seatType: true },
+    });
+    const seatTypeMap = Object.fromEntries(seatRecords.map((s) => [s.id, s.seatType]));
+    const seatsWithType = data.seats.map((s) => ({ ...s, seatType: seatTypeMap[s.seatId] }));
+
     const { seats: pricedSeats, totalPrice } = await calculateBookingPrice(
-      data.seats,
+      seatsWithType,
       screening.hall.hallType,
       screening.startTime
     );

@@ -11,6 +11,7 @@ interface SeatData {
   row: string;
   number: number;
   seatType: string;
+  isActive: boolean;
 }
 
 interface BookingSeatData {
@@ -23,9 +24,11 @@ interface SeatStepProps {
   onBack: () => void;
 }
 
-async function fetchSeatPrice(screeningId: string, ticketType: TicketTypeOption): Promise<number> {
+async function fetchSeatPrice(screeningId: string, ticketType: TicketTypeOption, seatType?: string): Promise<number> {
   try {
-    const res = await fetch(`/api/price-policy/calculate?ticketType=${ticketType}&screeningId=${screeningId}`);
+    const params = new URLSearchParams({ ticketType, screeningId });
+    if (seatType) params.set("seatType", seatType);
+    const res = await fetch(`/api/price-policy/calculate?${params}`);
     if (!res.ok) throw new Error();
     const { data } = await res.json();
     return data.totalPerSeat as number;
@@ -55,11 +58,10 @@ export function SeatStep({ screeningId, onNext, onBack }: SeatStepProps) {
   const selectedIds = new Set(selectedSeats.map((s) => s.seatId));
 
   const toggleSeat = async (seat: SeatData) => {
-    if (takenSeatIds.has(seat.id)) return;
+    if (takenSeatIds.has(seat.id) || !seat.isActive) return;
     if (selectedIds.has(seat.id)) {
       removeSeat(seat.id);
     } else {
-      // 임시 가격으로 추가 후 서버에서 실제 가격 조회
       addSeat({
         seatId: seat.id,
         row: seat.row,
@@ -68,7 +70,7 @@ export function SeatStep({ screeningId, onNext, onBack }: SeatStepProps) {
         ticketType: "ADULT",
         price: TICKET_PRICES.ADULT,
       });
-      const price = await fetchSeatPrice(screeningId, "ADULT");
+      const price = await fetchSeatPrice(screeningId, "ADULT", seat.seatType);
       updateSeatPrice(seat.id, price);
     }
   };
@@ -96,20 +98,28 @@ export function SeatStep({ screeningId, onNext, onBack }: SeatStepProps) {
                 .filter((s) => s.row === row)
                 .sort((a, b) => a.number - b.number)
                 .map((seat) => {
-                  const taken = takenSeatIds.has(seat.id);
+                  const taken    = takenSeatIds.has(seat.id);
+                  const inactive = !seat.isActive;
+                  const couple   = seat.seatType === "COUPLE";
                   const selected = selectedIds.has(seat.id);
+                  const disabled = taken || inactive;
                   return (
                     <button
                       key={seat.id}
                       onClick={() => toggleSeat(seat)}
-                      disabled={taken}
+                      disabled={disabled}
+                      title={inactive ? "점검 중" : couple ? "커플석" : undefined}
                       className={cn(
                         "w-7 h-7 rounded-t-lg text-xs font-medium transition-colors",
-                        taken
-                          ? "bg-gray-700 text-gray-600 cursor-not-allowed"
-                          : selected
-                            ? "bg-kgv-red text-white"
-                            : "bg-kgv-gray hover:bg-kgv-red/40 text-gray-300"
+                        inactive
+                          ? "bg-yellow-900/60 text-yellow-700 cursor-not-allowed"
+                          : taken
+                            ? "bg-gray-700 text-gray-600 cursor-not-allowed"
+                            : selected
+                              ? "bg-kgv-red text-white"
+                              : couple
+                                ? "bg-pink-800/70 hover:bg-pink-600 text-pink-200"
+                                : "bg-kgv-gray hover:bg-kgv-red/40 text-gray-300"
                       )}
                     >
                       {seat.number}
@@ -122,11 +132,13 @@ export function SeatStep({ screeningId, onNext, onBack }: SeatStepProps) {
       </div>
 
       {/* 범례 */}
-      <div className="flex gap-6 justify-center mb-8 text-xs text-gray-400">
+      <div className="flex flex-wrap gap-4 justify-center mb-8 text-xs text-gray-400">
         {[
-          { color: "bg-kgv-gray", label: "선택가능" },
-          { color: "bg-kgv-red",  label: "선택됨"  },
-          { color: "bg-gray-700", label: "매진"    },
+          { color: "bg-kgv-gray",          label: "선택가능" },
+          { color: "bg-kgv-red",           label: "선택됨"   },
+          { color: "bg-gray-700",          label: "매진"     },
+          { color: "bg-pink-800/70",       label: "커플석"   },
+          { color: "bg-yellow-900/60",     label: "점검 중"  },
         ].map(({ color, label }) => (
           <div key={label} className="flex items-center gap-1">
             <div className={cn("w-4 h-4 rounded-sm", color)} />

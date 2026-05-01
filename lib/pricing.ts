@@ -59,32 +59,35 @@ function getDayCode(startTime: Date): string {
 export async function calculateTicketPrice(
   ticketType: TicketTypeOption,
   hallType: string,
-  screeningStartTime: Date
+  screeningStartTime: Date,
+  seatType?: string
 ): Promise<PriceBreakdown> {
   const timeCode = getTimeCode(screeningStartTime);
   const dayCode  = getDayCode(screeningStartTime);
 
-  const [ticketPolicy, hallPolicy, timePolicy, dayPolicy] = await Promise.all([
-    getActivePolicy("TICKET", ticketType),
-    getActivePolicy("HALL",   hallType),
-    getActivePolicy("TIME",   timeCode),
-    getActivePolicy("DAY",    dayCode),
+  const [ticketPolicy, hallPolicy, timePolicy, dayPolicy, seatPolicy] = await Promise.all([
+    getActivePolicy("TICKET",    ticketType),
+    getActivePolicy("HALL",      hallType),
+    getActivePolicy("TIME",      timeCode),
+    getActivePolicy("DAY",       dayCode),
+    seatType ? getActivePolicy("SEAT_TYPE", seatType) : Promise.resolve(null),
   ]);
 
   const basePrice     = ticketPolicy?.value ?? TICKET_PRICES[ticketType] ?? 15000;
   const hallSurcharge = hallPolicy?.value   ?? 0;
   const timeSurcharge = timePolicy?.value   ?? 0;
   const daySurcharge  = dayPolicy?.value    ?? 0;
-  const totalPerSeat  = basePrice + hallSurcharge + timeSurcharge + daySurcharge;
+  const seatSurcharge = seatPolicy?.value   ?? 0;
+  const totalPerSeat  = basePrice + hallSurcharge + timeSurcharge + daySurcharge + seatSurcharge;
 
-  return { basePrice, hallSurcharge, timeSurcharge, daySurcharge, totalPerSeat };
+  return { basePrice, hallSurcharge, timeSurcharge, daySurcharge, seatSurcharge, totalPerSeat };
 }
 
 // ================================
 // 전체 예매 좌석 가격 일괄 계산
 // ================================
 export async function calculateBookingPrice(
-  seats: BookingSeatRequest[],
+  seats: Array<BookingSeatRequest & { seatType?: string }>,
   hallType: string,
   screeningStartTime: Date
 ): Promise<{
@@ -96,7 +99,8 @@ export async function calculateBookingPrice(
       const breakdown = await calculateTicketPrice(
         seat.ticketType,
         hallType,
-        screeningStartTime
+        screeningStartTime,
+        seat.seatType
       );
       return { ...seat, price: breakdown.totalPerSeat };
     })
