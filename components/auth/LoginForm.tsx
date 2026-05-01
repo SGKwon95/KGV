@@ -9,7 +9,7 @@ import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
 
 const loginSchema = z.object({
-  email: z.string().email("올바른 이메일을 입력해주세요."),
+  loginId:  z.string().min(1, "아이디를 입력해주세요."),
   password: z.string().min(1, "비밀번호를 입력해주세요."),
 });
 
@@ -33,7 +33,7 @@ export function LoginForm() {
   const onSubmit = async (data: LoginFormData) => {
     setError(null);
     try {
-      await login(data.email, data.password);
+      await login(data.loginId, data.password);
       router.push(callbackUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : "로그인에 실패했습니다.");
@@ -49,15 +49,16 @@ export function LoginForm() {
       )}
 
       <div>
-        <label className="block text-sm text-gray-400 mb-1">이메일</label>
+        <label className="block text-sm text-gray-400 mb-1">아이디</label>
         <input
-          {...register("email")}
-          type="email"
-          placeholder="이메일 주소"
+          {...register("loginId")}
+          type="text"
+          placeholder="아이디"
+          autoComplete="username"
           className="w-full bg-kgv-gray text-white px-4 py-3 rounded border border-kgv-gray focus:border-kgv-red outline-none"
         />
-        {errors.email && (
-          <p className="text-red-400 text-xs mt-1">{errors.email.message}</p>
+        {errors.loginId && (
+          <p className="text-red-400 text-xs mt-1">{errors.loginId.message}</p>
         )}
       </div>
 
@@ -67,6 +68,7 @@ export function LoginForm() {
           {...register("password")}
           type="password"
           placeholder="비밀번호"
+          autoComplete="current-password"
           className="w-full bg-kgv-gray text-white px-4 py-3 rounded border border-kgv-gray focus:border-kgv-red outline-none"
         />
         {errors.password && (

@@ -35,6 +35,7 @@ model CommonCode {
 // ================================
 model User {
   id          String   @id @default(cuid())
+  loginId     String   @unique               // 로그인 아이디
   email       String   @unique
   name        String?
   nickname    String?  @unique
@@ -43,7 +44,6 @@ model User {
   image       String?
   role        String   @default("USER")       // CommonCode: USER_ROLE
   userStatus  String   @default("ACTIVE")     // CommonCode: USER_STATUS
-  point       Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -140,7 +140,6 @@ model Screening {
   hallId    String
   startTime DateTime
   endTime   DateTime
-  price     Int      // 기본 가격 (원)
   status    String   @default("SCHEDULED")   // CommonCode: SCREENING_STATUS
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -187,6 +186,27 @@ model BookingSeat {
 
   @@unique([bookingId, seatId])
   @@map("booking_seats")
+}
+
+// ================================
+// 가격 정책
+// ================================
+model PricePolicy {
+  id          String    @id @default(cuid())
+  policyGroup String    // TICKET / HALL / TIME / DAY
+  code        String
+  label       String
+  value       Int       // 가격 또는 할증료 (음수 = 할인)
+  description String?
+  startAt     DateTime? // null = 항상 적용
+  endAt       DateTime? // null = 종료일 없음
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([policyGroup, code])
+  @@map("price_policies")
 }
 
 // ================================

@@ -13,6 +13,7 @@ export type {
   BookingSeat,
   Review,
   CommonCode,
+  PricePolicy,
 } from "@prisma/client";
 
 // ================================
@@ -79,7 +80,6 @@ export interface ScreeningWithDetails {
   id: string;
   startTime: Date;
   endTime: Date;
-  price: number;
   status: string;
   movie: {
     id: string;
@@ -154,3 +154,28 @@ export const TICKET_TYPE_LABELS: Record<TicketTypeOption, string> = {
   SENIOR: "경로",
   DISABLED: "장애인/국가유공자",
 };
+
+// ================================
+// 가격 정책
+// ================================
+export const POLICY_GROUP = {
+  TICKET: "TICKET",
+  HALL:   "HALL",
+  TIME:   "TIME",
+  DAY:    "DAY",
+} as const;
+
+export type PolicyGroup = typeof POLICY_GROUP[keyof typeof POLICY_GROUP];
+
+export interface PriceBreakdown {
+  basePrice:     number;
+  hallSurcharge: number;
+  timeSurcharge: number;
+  daySurcharge:  number;
+  totalPerSeat:  number;
+}
+
+export interface BookingSeatRequest {
+  seatId:     string;
+  ticketType: TicketTypeOption;
+}

@@ -9,11 +9,12 @@ import { z } from "zod";
 
 const registerSchema = z
   .object({
-    name: z.string().min(2, "이름은 2자 이상이어야 합니다."),
-    email: z.string().email("올바른 이메일을 입력해주세요."),
-    password: z.string().min(8, "비밀번호는 8자 이상이어야 합니다."),
+    loginId:         z.string().min(4, "아이디는 4자 이상이어야 합니다.").max(20, "아이디는 20자 이하여야 합니다.").regex(/^[a-z0-9_]+$/, "영문 소문자, 숫자, 밑줄(_)만 사용 가능합니다."),
+    name:            z.string().min(2, "이름은 2자 이상이어야 합니다."),
+    email:           z.string().email("올바른 이메일을 입력해주세요."),
+    password:        z.string().min(8, "비밀번호는 8자 이상이어야 합니다."),
     confirmPassword: z.string(),
-    phone: z.string().optional(),
+    phone:           z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "비밀번호가 일치하지 않습니다.",
@@ -41,10 +42,11 @@ export function RegisterForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: data.name,
-          email: data.email,
+          loginId:  data.loginId,
+          name:     data.name,
+          email:    data.email,
           password: data.password,
-          phone: data.phone,
+          phone:    data.phone,
         }),
       });
 
@@ -59,6 +61,15 @@ export function RegisterForm() {
     }
   };
 
+  const fields = [
+    { name: "loginId" as const,         label: "아이디",           type: "text",     placeholder: "영문 소문자, 숫자, 밑줄 4~20자" },
+    { name: "name" as const,            label: "이름",             type: "text",     placeholder: "이름" },
+    { name: "email" as const,           label: "이메일",           type: "email",    placeholder: "이메일 주소" },
+    { name: "password" as const,        label: "비밀번호",         type: "password", placeholder: "8자 이상" },
+    { name: "confirmPassword" as const, label: "비밀번호 확인",   type: "password", placeholder: "비밀번호 재입력" },
+    { name: "phone" as const,           label: "휴대폰 번호 (선택)", type: "tel",   placeholder: "010-0000-0000" },
+  ];
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       {error && (
@@ -67,13 +78,7 @@ export function RegisterForm() {
         </div>
       )}
 
-      {[
-        { name: "name" as const, label: "이름", type: "text", placeholder: "이름" },
-        { name: "email" as const, label: "이메일", type: "email", placeholder: "이메일 주소" },
-        { name: "password" as const, label: "비밀번호", type: "password", placeholder: "8자 이상" },
-        { name: "confirmPassword" as const, label: "비밀번호 확인", type: "password", placeholder: "비밀번호 재입력" },
-        { name: "phone" as const, label: "휴대폰 번호 (선택)", type: "tel", placeholder: "010-0000-0000" },
-      ].map((field) => (
+      {fields.map((field) => (
         <div key={field.name}>
           <label className="block text-sm text-gray-400 mb-1">{field.label}</label>
           <input

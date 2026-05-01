@@ -25,7 +25,6 @@ export default async function MyPage() {
         nickname: true,
         phone: true,
         image: true,
-        point: true,
         createdAt: true,
       },
     }),

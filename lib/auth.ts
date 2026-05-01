@@ -8,14 +8,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     CredentialsProvider({
       name: "credentials",
       credentials: {
-        email: { label: "이메일", type: "email" },
+        loginId:  { label: "아이디",   type: "text"     },
         password: { label: "비밀번호", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.loginId || !credentials?.password) return null;
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
+          where: { loginId: credentials.loginId as string },
         });
 
         if (!user) return null;
@@ -33,7 +33,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
-    error: "/login",
+    error:  "/login",
   },
   callbacks: {
     async jwt({ token, user }) {

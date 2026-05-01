@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { formatDate, formatPrice } from "@/lib/utils";
-import { User, Star } from "lucide-react";
+import { User } from "lucide-react";
 
 interface UserProfileProps {
   user: {
@@ -9,7 +9,6 @@ interface UserProfileProps {
     nickname?: string | null;
     phone?: string | null;
     image?: string | null;
-    point: number;
     createdAt: Date;
   };
 }
@@ -30,14 +29,6 @@ export function UserProfile({ user }: UserProfileProps) {
       </div>
 
       <div className="space-y-3">
-        <div className="flex items-center justify-between bg-kgv-dark rounded-lg p-3">
-          <div className="flex items-center gap-2 text-sm text-gray-400">
-            <Star size={16} className="text-kgv-gold" />
-            보유 포인트
-          </div>
-          <span className="text-white font-bold">{user.point.toLocaleString()}P</span>
-        </div>
-
         {user.nickname && (
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">닉네임</span>

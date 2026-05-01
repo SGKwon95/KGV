@@ -2,14 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
+import { calculateBookingPrice } from "@/lib/pricing";
 
 const bookingSchema = z.object({
   screeningId: z.string(),
   seats: z.array(
     z.object({
-      seatId: z.string(),
+      seatId:     z.string(),
       ticketType: z.enum(["ADULT", "TEEN", "CHILD", "SENIOR", "DISABLED"]),
-      price: z.number(),
     })
   ),
   paymentMethod: z.string().optional(),
@@ -27,6 +27,7 @@ export async function POST(request: Request) {
 
     const screening = await prisma.screening.findUnique({
       where: { id: data.screeningId },
+      include: { hall: true },
     });
     if (!screening) {
       return NextResponse.json({ error: "상영 정보를 찾을 수 없습니다." }, { status: 404 });
@@ -42,7 +43,6 @@ export async function POST(request: Request) {
         seatId: { in: data.seats.map((s) => s.seatId) },
       },
     });
-
     if (conflicting) {
       return NextResponse.json(
         { error: "이미 예약된 좌석이 포함되어 있습니다." },
@@ -50,7 +50,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const totalPrice = data.seats.reduce((sum, s) => sum + s.price, 0);
+    // 서버 사이드 가격 계산 (클라이언트 값 신뢰 안 함)
+    const { seats: pricedSeats, totalPrice } = await calculateBookingPrice(
+      data.seats,
+      screening.hall.hallType,
+      screening.startTime
+    );
+
     const now = new Date();
     const bookingNumber = `KGV${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
@@ -63,10 +69,10 @@ export async function POST(request: Request) {
         status: "CONFIRMED",
         paymentMethod: data.paymentMethod,
         bookingSeats: {
-          create: data.seats.map((s) => ({
-            seatId: s.seatId,
+          create: pricedSeats.map((s) => ({
+            seatId:     s.seatId,
             ticketType: s.ticketType,
-            price: s.price,
+            price:      s.price,
           })),
         },
       },

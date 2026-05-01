@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { cn, formatPrice } from "@/lib/utils";
 import { ChevronLeft } from "lucide-react";
 import { useBookingStore } from "@/hooks/useBooking";
-import { TICKET_PRICES, TICKET_TYPE_LABELS, type TicketTypeOption } from "@/types";
+import { TICKET_PRICES, type TicketTypeOption } from "@/types";
 
 interface SeatData {
   id: string;
@@ -23,8 +23,19 @@ interface SeatStepProps {
   onBack: () => void;
 }
 
+async function fetchSeatPrice(screeningId: string, ticketType: TicketTypeOption): Promise<number> {
+  try {
+    const res = await fetch(`/api/price-policy/calculate?ticketType=${ticketType}&screeningId=${screeningId}`);
+    if (!res.ok) throw new Error();
+    const { data } = await res.json();
+    return data.totalPerSeat as number;
+  } catch {
+    return TICKET_PRICES[ticketType];
+  }
+}
+
 export function SeatStep({ screeningId, onNext, onBack }: SeatStepProps) {
-  const { selectedSeats, addSeat, removeSeat, setScreeningId, getTotalPrice } = useBookingStore();
+  const { selectedSeats, addSeat, removeSeat, updateSeatPrice, setScreeningId, getTotalPrice } = useBookingStore();
   const [seats, setSeats] = useState<SeatData[]>([]);
   const [takenSeatIds, setTakenSeatIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -43,11 +54,12 @@ export function SeatStep({ screeningId, onNext, onBack }: SeatStepProps) {
   const rows = [...new Set(seats.map((s) => s.row))].sort();
   const selectedIds = new Set(selectedSeats.map((s) => s.seatId));
 
-  const toggleSeat = (seat: SeatData) => {
+  const toggleSeat = async (seat: SeatData) => {
     if (takenSeatIds.has(seat.id)) return;
     if (selectedIds.has(seat.id)) {
       removeSeat(seat.id);
     } else {
+      // 임시 가격으로 추가 후 서버에서 실제 가격 조회
       addSeat({
         seatId: seat.id,
         row: seat.row,
@@ -56,6 +68,8 @@ export function SeatStep({ screeningId, onNext, onBack }: SeatStepProps) {
         ticketType: "ADULT",
         price: TICKET_PRICES.ADULT,
       });
+      const price = await fetchSeatPrice(screeningId, "ADULT");
+      updateSeatPrice(seat.id, price);
     }
   };
 
@@ -111,8 +125,8 @@ export function SeatStep({ screeningId, onNext, onBack }: SeatStepProps) {
       <div className="flex gap-6 justify-center mb-8 text-xs text-gray-400">
         {[
           { color: "bg-kgv-gray", label: "선택가능" },
-          { color: "bg-kgv-red", label: "선택됨" },
-          { color: "bg-gray-700", label: "매진" },
+          { color: "bg-kgv-red",  label: "선택됨"  },
+          { color: "bg-gray-700", label: "매진"    },
         ].map(({ color, label }) => (
           <div key={label} className="flex items-center gap-1">
             <div className={cn("w-4 h-4 rounded-sm", color)} />

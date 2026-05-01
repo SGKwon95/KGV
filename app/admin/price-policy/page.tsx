@@ -1,83 +1,68 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Save, RotateCcw, Info } from "lucide-react";
+import type { PricePolicy } from "@/types";
 
 // ─── 타입 ───────────────────────────────────────────────
 type TicketPolicy = {
+  id?: string;
   type: string;
   label: string;
   price: number;
 };
 
 type HallPolicy = {
+  id?: string;
   type: string;
   label: string;
-  surcharge: number; // 기본가 대비 추가 금액
+  surcharge: number;
 };
 
 type TimePolicy = {
-  id: string;
+  id?: string;
+  id_code: string;
   label: string;
   description: string;
   surcharge: number;
 };
 
 type DayPolicy = {
-  id: string;
+  id?: string;
+  id_code: string;
   label: string;
   surcharge: number;
 };
 
-// ─── 초기 데이터 ────────────────────────────────────────
-const INITIAL_TICKETS: TicketPolicy[] = [
-  { type: "ADULT", label: "성인", price: 15000 },
-  { type: "TEEN", label: "청소년", price: 12000 },
-  { type: "CHILD", label: "어린이", price: 9000 },
-  { type: "SENIOR", label: "경로", price: 9000 },
-  { type: "DISABLED", label: "장애인", price: 7000 },
+// ─── 초기 기본값 (DB 로드 전 placeholder) ────────────────
+const DEFAULT_TICKETS: TicketPolicy[] = [
+  { type: "ADULT",    label: "성인",              price: 15000 },
+  { type: "TEEN",     label: "청소년",            price: 12000 },
+  { type: "CHILD",    label: "어린이",            price: 8000  },
+  { type: "SENIOR",   label: "경로",              price: 9000  },
+  { type: "DISABLED", label: "장애인/국가유공자", price: 7000  },
 ];
 
-const INITIAL_HALLS: HallPolicy[] = [
-  { type: "STANDARD", label: "일반관", surcharge: 0 },
-  { type: "IMAX", label: "IMAX", surcharge: 5000 },
-  { type: "FOUR_DX", label: "4DX", surcharge: 6000 },
-  { type: "SCREEN_X", label: "ScreenX", surcharge: 4000 },
-  { type: "PREMIUM", label: "프리미엄", surcharge: 3000 },
+const DEFAULT_HALLS: HallPolicy[] = [
+  { type: "STANDARD", label: "일반관",   surcharge: 0    },
+  { type: "IMAX",     label: "IMAX",     surcharge: 5000 },
+  { type: "FOUR_DX",  label: "4DX",      surcharge: 6000 },
+  { type: "SCREEN_X", label: "ScreenX",  surcharge: 4000 },
+  { type: "PREMIUM",  label: "프리미엄", surcharge: 3000 },
 ];
 
-const INITIAL_TIMES: TimePolicy[] = [
-  {
-    id: "morning",
-    label: "조조",
-    description: "첫 회차 (오전 11시 이전 시작)",
-    surcharge: -2000,
-  },
-  {
-    id: "regular",
-    label: "일반",
-    description: "11:00 ~ 17:59 시작",
-    surcharge: 0,
-  },
-  {
-    id: "evening",
-    label: "저녁",
-    description: "18:00 ~ 21:59 시작",
-    surcharge: 1000,
-  },
-  {
-    id: "night",
-    label: "심야",
-    description: "22:00 이후 시작",
-    surcharge: 2000,
-  },
+const DEFAULT_TIMES: TimePolicy[] = [
+  { id_code: "morning", label: "조조", description: "오전 11시 이전 시작", surcharge: -2000 },
+  { id_code: "regular", label: "일반", description: "11:00 ~ 17:59 시작",  surcharge: 0     },
+  { id_code: "evening", label: "저녁", description: "18:00 ~ 21:59 시작", surcharge: 1000  },
+  { id_code: "night",   label: "심야", description: "22:00 이후 시작",    surcharge: 2000  },
 ];
 
-const INITIAL_DAYS: DayPolicy[] = [
-  { id: "weekday", label: "평일 (월~목)", surcharge: 0 },
-  { id: "friday", label: "금요일", surcharge: 1000 },
-  { id: "weekend", label: "주말 (토~일)", surcharge: 2000 },
-  { id: "holiday", label: "공휴일", surcharge: 2000 },
+const DEFAULT_DAYS: DayPolicy[] = [
+  { id_code: "weekday", label: "평일 (월~목)", surcharge: 0    },
+  { id_code: "friday",  label: "금요일",        surcharge: 1000 },
+  { id_code: "weekend", label: "주말 (토~일)", surcharge: 2000 },
+  { id_code: "holiday", label: "공휴일",        surcharge: 2000 },
 ];
 
 // ─── 유틸 ────────────────────────────────────────────────
@@ -119,69 +104,141 @@ function PriceInput({
   );
 }
 
+// ─── DB 응답 → 로컬 state 변환 ───────────────────────────
+function mapPolicies(policies: PricePolicy[]) {
+  const tickets: TicketPolicy[] = DEFAULT_TICKETS.map((d) => {
+    const p = policies.find((x) => x.policyGroup === "TICKET" && x.code === d.type);
+    return p ? { id: p.id, type: p.code, label: p.label, price: p.value } : d;
+  });
+  const halls: HallPolicy[] = DEFAULT_HALLS.map((d) => {
+    const p = policies.find((x) => x.policyGroup === "HALL" && x.code === d.type);
+    return p ? { id: p.id, type: p.code, label: p.label, surcharge: p.value } : d;
+  });
+  const times: TimePolicy[] = DEFAULT_TIMES.map((d) => {
+    const p = policies.find((x) => x.policyGroup === "TIME" && x.code === d.id_code);
+    return p ? { id: p.id, id_code: p.code, label: p.label, description: p.description ?? d.description, surcharge: p.value } : d;
+  });
+  const days: DayPolicy[] = DEFAULT_DAYS.map((d) => {
+    const p = policies.find((x) => x.policyGroup === "DAY" && x.code === d.id_code);
+    return p ? { id: p.id, id_code: p.code, label: p.label, surcharge: p.value } : d;
+  });
+  return { tickets, halls, times, days };
+}
+
 // ─── 메인 컴포넌트 ──────────────────────────────────────
 export default function PricePolicyPage() {
-  const [tickets, setTickets] = useState<TicketPolicy[]>(INITIAL_TICKETS);
-  const [halls, setHalls] = useState<HallPolicy[]>(INITIAL_HALLS);
-  const [times, setTimes] = useState<TimePolicy[]>(INITIAL_TIMES);
-  const [days, setDays] = useState<DayPolicy[]>(INITIAL_DAYS);
-  const [saved, setSaved] = useState(false);
-  const [dirty, setDirty] = useState(false);
+  const [tickets, setTickets] = useState<TicketPolicy[]>(DEFAULT_TICKETS);
+  const [halls,   setHalls]   = useState<HallPolicy[]>(DEFAULT_HALLS);
+  const [times,   setTimes]   = useState<TimePolicy[]>(DEFAULT_TIMES);
+  const [days,    setDays]    = useState<DayPolicy[]>(DEFAULT_DAYS);
+
+  const [loading, setLoading] = useState(true);
+  const [saving,  setSaving]  = useState(false);
+  const [saved,   setSaved]   = useState(false);
+  const [dirty,   setDirty]   = useState(false);
+  const [error,   setError]   = useState<string | null>(null);
+
+  // DB에서 현재 정책 로드
+  useEffect(() => {
+    fetch("/api/price-policy")
+      .then((r) => r.json())
+      .then(({ data }: { data: PricePolicy[] }) => {
+        if (!data?.length) return;
+        // startAt 없는 영구 정책만 관리자 UI에 표시 (기간 한정 정책은 별도)
+        const base = data.filter((p) => p.startAt === null);
+        const mapped = mapPolicies(base);
+        setTickets(mapped.tickets);
+        setHalls(mapped.halls);
+        setTimes(mapped.times);
+        setDays(mapped.days);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   function markDirty() {
     setSaved(false);
     setDirty(true);
+    setError(null);
   }
 
-  function handleSave() {
-    // TODO: DB 연동 시 API 호출
-    setSaved(true);
-    setDirty(false);
+  async function handleSave() {
+    setSaving(true);
+    setError(null);
+    try {
+      const policies = [
+        ...tickets.map((t, i) => ({
+          id: t.id, policyGroup: "TICKET" as const, code: t.type,
+          label: t.label, value: t.price, sortOrder: i,
+        })),
+        ...halls.map((h, i) => ({
+          id: h.id, policyGroup: "HALL" as const, code: h.type,
+          label: h.label, value: h.surcharge, sortOrder: i,
+        })),
+        ...times.map((t, i) => ({
+          id: t.id, policyGroup: "TIME" as const, code: t.id_code,
+          label: t.label, description: t.description, value: t.surcharge, sortOrder: i,
+        })),
+        ...days.map((d, i) => ({
+          id: d.id, policyGroup: "DAY" as const, code: d.id_code,
+          label: d.label, value: d.surcharge, sortOrder: i,
+        })),
+      ];
+
+      const res = await fetch("/api/price-policy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ policies }),
+      });
+      if (!res.ok) {
+        const body = await res.json();
+        throw new Error(body.error ?? "저장 실패");
+      }
+      setSaved(true);
+      setDirty(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "저장에 실패했습니다.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   function handleReset() {
-    setTickets(INITIAL_TICKETS);
-    setHalls(INITIAL_HALLS);
-    setTimes(INITIAL_TIMES);
-    setDays(INITIAL_DAYS);
+    setTickets(DEFAULT_TICKETS);
+    setHalls(DEFAULT_HALLS);
+    setTimes(DEFAULT_TIMES);
+    setDays(DEFAULT_DAYS);
     setSaved(false);
     setDirty(false);
+    setError(null);
   }
 
   function updateTicket(type: string, price: number) {
-    setTickets((prev) =>
-      prev.map((t) => (t.type === type ? { ...t, price } : t))
-    );
+    setTickets((prev) => prev.map((t) => (t.type === type ? { ...t, price } : t)));
     markDirty();
   }
-
   function updateHall(type: string, surcharge: number) {
-    setHalls((prev) =>
-      prev.map((h) => (h.type === type ? { ...h, surcharge } : h))
-    );
+    setHalls((prev) => prev.map((h) => (h.type === type ? { ...h, surcharge } : h)));
     markDirty();
   }
-
-  function updateTime(id: string, surcharge: number) {
-    setTimes((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, surcharge } : t))
-    );
+  function updateTime(id_code: string, surcharge: number) {
+    setTimes((prev) => prev.map((t) => (t.id_code === id_code ? { ...t, surcharge } : t)));
     markDirty();
   }
-
-  function updateDay(id: string, surcharge: number) {
-    setDays((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, surcharge } : d))
-    );
+  function updateDay(id_code: string, surcharge: number) {
+    setDays((prev) => prev.map((d) => (d.id_code === id_code ? { ...d, surcharge } : d)));
     markDirty();
   }
 
   // 예시 계산: 성인 + IMAX + 금요일 저녁
-  const adultPrice = tickets.find((t) => t.type === "ADULT")?.price ?? 15000;
-  const imaxSurcharge = halls.find((h) => h.type === "IMAX")?.surcharge ?? 5000;
-  const eveningSurcharge = times.find((t) => t.id === "evening")?.surcharge ?? 1000;
-  const fridaySurcharge = days.find((d) => d.id === "friday")?.surcharge ?? 1000;
-  const exampleTotal = adultPrice + imaxSurcharge + eveningSurcharge + fridaySurcharge;
+  const adultPrice       = tickets.find((t) => t.type === "ADULT")?.price ?? 15000;
+  const imaxSurcharge    = halls.find((h) => h.type === "IMAX")?.surcharge ?? 5000;
+  const eveningSurcharge = times.find((t) => t.id_code === "evening")?.surcharge ?? 1000;
+  const fridaySurcharge  = days.find((d) => d.id_code === "friday")?.surcharge ?? 1000;
+  const exampleTotal     = adultPrice + imaxSurcharge + eveningSurcharge + fridaySurcharge;
+
+  if (loading) {
+    return <div className="text-center py-12 text-gray-400">정책 불러오는 중...</div>;
+  }
 
   return (
     <div className="max-w-4xl">
@@ -196,16 +253,19 @@ export default function PricePolicyPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={handleReset}
-            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-400 hover:text-white border border-kgv-gray hover:border-gray-500 rounded transition-colors"
+            disabled={saving}
+            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-400 hover:text-white border border-kgv-gray hover:border-gray-500 rounded transition-colors disabled:opacity-50"
           >
             <RotateCcw size={14} />
             초기화
           </button>
           <button
             onClick={handleSave}
-            disabled={!dirty}
+            disabled={!dirty || saving}
             className={`flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded transition-colors ${
-              dirty
+              saving
+                ? "bg-kgv-gray text-gray-400 cursor-default"
+                : dirty
                 ? "bg-kgv-red hover:bg-kgv-red-dark text-white"
                 : saved
                 ? "bg-green-700 text-white cursor-default"
@@ -213,10 +273,16 @@ export default function PricePolicyPage() {
             }`}
           >
             <Save size={14} />
-            {saved ? "저장됨" : "저장"}
+            {saving ? "저장 중..." : saved ? "저장됨" : "저장"}
           </button>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-red-900/30 border border-red-700 text-red-300 rounded p-3 text-sm mb-6">
+          {error}
+        </div>
+      )}
 
       <div className="space-y-6">
         {/* ── 1. 기본 티켓 가격 ── */}
@@ -244,16 +310,11 @@ export default function PricePolicyPage() {
                     )}
                   </td>
                   <td className="py-3.5 text-right">
-                    <PriceInput
-                      value={t.price}
-                      onChange={(v) => updateTicket(t.type, v)}
-                    />
+                    <PriceInput value={t.price} onChange={(v) => updateTicket(t.type, v)} />
                   </td>
                   <td className="py-3.5 text-right pr-1">
                     <span className={`text-xs ${t.price < adultPrice ? "text-blue-400" : t.price === adultPrice ? "text-gray-600" : "text-gray-400"}`}>
-                      {t.type === "ADULT"
-                        ? "—"
-                        : formatPrice(t.price - adultPrice)}
+                      {t.type === "ADULT" ? "—" : formatPrice(t.price - adultPrice)}
                     </span>
                   </td>
                 </tr>
@@ -287,11 +348,7 @@ export default function PricePolicyPage() {
                     )}
                   </td>
                   <td className="py-3.5 text-right">
-                    <PriceInput
-                      value={h.surcharge}
-                      onChange={(v) => updateHall(h.type, v)}
-                      signed
-                    />
+                    <PriceInput value={h.surcharge} onChange={(v) => updateHall(h.type, v)} signed />
                   </td>
                   <td className="py-3.5 text-right pr-1">
                     <span className="text-xs text-gray-500">
@@ -319,17 +376,13 @@ export default function PricePolicyPage() {
             </thead>
             <tbody className="divide-y divide-kgv-gray/50">
               {times.map((t) => (
-                <tr key={t.id}>
+                <tr key={t.id_code}>
                   <td className="py-3.5">
                     <span className="text-white text-sm font-medium">{t.label}</span>
                   </td>
                   <td className="py-3.5 text-xs text-gray-500">{t.description}</td>
                   <td className="py-3.5 text-right">
-                    <PriceInput
-                      value={t.surcharge}
-                      onChange={(v) => updateTime(t.id, v)}
-                      signed
-                    />
+                    <PriceInput value={t.surcharge} onChange={(v) => updateTime(t.id_code, v)} signed />
                   </td>
                 </tr>
               ))}
@@ -351,21 +404,17 @@ export default function PricePolicyPage() {
             </thead>
             <tbody className="divide-y divide-kgv-gray/50">
               {days.map((d) => (
-                <tr key={d.id}>
+                <tr key={d.id_code}>
                   <td className="py-3.5">
                     <span className="text-white text-sm font-medium">{d.label}</span>
-                    {d.id === "weekday" && (
+                    {d.id_code === "weekday" && (
                       <span className="ml-2 text-xs text-gray-600 bg-kgv-gray/50 px-1.5 py-0.5 rounded">
                         기준
                       </span>
                     )}
                   </td>
                   <td className="py-3.5 text-right">
-                    <PriceInput
-                      value={d.surcharge}
-                      onChange={(v) => updateDay(d.id, v)}
-                      signed
-                    />
+                    <PriceInput value={d.surcharge} onChange={(v) => updateDay(d.id_code, v)} signed />
                   </td>
                 </tr>
               ))}
@@ -378,26 +427,20 @@ export default function PricePolicyPage() {
           <div className="flex items-center gap-2 mb-4">
             <Info size={15} className="text-kgv-red" />
             <span className="text-sm font-semibold text-white">요금 계산 예시</span>
-            <span className="text-xs text-gray-500 ml-1">
-              (성인 · IMAX · 금요일 저녁)
-            </span>
+            <span className="text-xs text-gray-500 ml-1">(성인 · IMAX · 금요일 저녁)</span>
           </div>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between text-gray-400">
-              <span>성인 기본가</span>
-              <span>{adultPrice.toLocaleString()}원</span>
+              <span>성인 기본가</span><span>{adultPrice.toLocaleString()}원</span>
             </div>
             <div className="flex justify-between text-gray-400">
-              <span>IMAX 할증</span>
-              <span>+{imaxSurcharge.toLocaleString()}원</span>
+              <span>IMAX 할증</span><span>+{imaxSurcharge.toLocaleString()}원</span>
             </div>
             <div className="flex justify-between text-gray-400">
-              <span>저녁 할증</span>
-              <span>+{eveningSurcharge.toLocaleString()}원</span>
+              <span>저녁 할증</span><span>+{eveningSurcharge.toLocaleString()}원</span>
             </div>
             <div className="flex justify-between text-gray-400">
-              <span>금요일 할증</span>
-              <span>+{fridaySurcharge.toLocaleString()}원</span>
+              <span>금요일 할증</span><span>+{fridaySurcharge.toLocaleString()}원</span>
             </div>
             <div className="flex justify-between text-white font-bold border-t border-kgv-gray pt-2 mt-2">
               <span>합계</span>
@@ -410,16 +453,7 @@ export default function PricePolicyPage() {
   );
 }
 
-// ─── 섹션 래퍼 ──────────────────────────────────────────
-function Section({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
+function Section({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
   return (
     <div className="bg-kgv-gray rounded-lg p-6">
       <div className="mb-5">

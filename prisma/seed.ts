@@ -69,6 +69,44 @@ async function main() {
   console.log(`✅ CommonCode ${commonCodes.length}개 시딩 완료`);
 
   // ================================
+  // 가격 정책 (PricePolicy)
+  // ================================
+  const pricePolicies = [
+    // TICKET
+    { id: "pp-ticket-adult",    policyGroup: "TICKET", code: "ADULT",    label: "성인",              value: 15000, sortOrder: 1 },
+    { id: "pp-ticket-teen",     policyGroup: "TICKET", code: "TEEN",     label: "청소년",            value: 12000, sortOrder: 2 },
+    { id: "pp-ticket-child",    policyGroup: "TICKET", code: "CHILD",    label: "어린이",            value: 8000,  sortOrder: 3 },
+    { id: "pp-ticket-senior",   policyGroup: "TICKET", code: "SENIOR",   label: "경로",              value: 9000,  sortOrder: 4 },
+    { id: "pp-ticket-disabled", policyGroup: "TICKET", code: "DISABLED", label: "장애인/국가유공자", value: 7000,  sortOrder: 5 },
+    // HALL
+    { id: "pp-hall-standard", policyGroup: "HALL", code: "STANDARD", label: "일반관",     value: 0,    sortOrder: 1 },
+    { id: "pp-hall-imax",     policyGroup: "HALL", code: "IMAX",     label: "IMAX",       value: 5000, sortOrder: 2 },
+    { id: "pp-hall-fourdx",   policyGroup: "HALL", code: "FOUR_DX",  label: "4DX",        value: 6000, sortOrder: 3 },
+    { id: "pp-hall-screenx",  policyGroup: "HALL", code: "SCREEN_X", label: "ScreenX",    value: 4000, sortOrder: 4 },
+    { id: "pp-hall-premium",  policyGroup: "HALL", code: "PREMIUM",  label: "프리미엄",   value: 3000, sortOrder: 5 },
+    // TIME
+    { id: "pp-time-morning", policyGroup: "TIME", code: "morning", label: "조조", description: "오전 11시 이전 시작", value: -2000, sortOrder: 1 },
+    { id: "pp-time-regular", policyGroup: "TIME", code: "regular", label: "일반", description: "11:00 ~ 17:59 시작",  value: 0,     sortOrder: 2 },
+    { id: "pp-time-evening", policyGroup: "TIME", code: "evening", label: "저녁", description: "18:00 ~ 21:59 시작", value: 1000,  sortOrder: 3 },
+    { id: "pp-time-night",   policyGroup: "TIME", code: "night",   label: "심야", description: "22:00 이후 시작",    value: 2000,  sortOrder: 4 },
+    // DAY
+    { id: "pp-day-weekday", policyGroup: "DAY", code: "weekday", label: "평일",   description: "월~목", value: 0,    sortOrder: 1 },
+    { id: "pp-day-friday",  policyGroup: "DAY", code: "friday",  label: "금요일",               value: 1000, sortOrder: 2 },
+    { id: "pp-day-weekend", policyGroup: "DAY", code: "weekend", label: "주말",   description: "토~일", value: 2000, sortOrder: 3 },
+    { id: "pp-day-holiday", policyGroup: "DAY", code: "holiday", label: "공휴일",               value: 2000, sortOrder: 4 },
+  ];
+
+  for (const item of pricePolicies) {
+    await prisma.pricePolicy.upsert({
+      where: { id: item.id },
+      update: { value: item.value, label: item.label, isActive: true },
+      create: { ...item, startAt: null, endAt: null },
+    });
+  }
+
+  console.log(`✅ PricePolicy ${pricePolicies.length}개 시딩 완료`);
+
+  // ================================
   // 테스트 유저
   // ================================
   const hashedPassword = await bcrypt.hash("password123", 12);
@@ -78,12 +116,12 @@ async function main() {
     update: {},
     create: {
       id: "user-01",
+      loginId: "hong",
       name: "홍길동",
       email: "hong@kgv.com",
       password: hashedPassword,
       nickname: "영화광",
       phone: "010-1234-5678",
-      point: 5000,
       role: "USER",
       userStatus: "ACTIVE",
     },
@@ -94,10 +132,10 @@ async function main() {
     update: {},
     create: {
       id: "user-02",
+      loginId: "testuser",
       name: "테스트유저",
       email: "test@kgv.com",
       password: hashedPassword,
-      point: 0,
       role: "USER",
       userStatus: "ACTIVE",
     },
@@ -267,6 +305,60 @@ async function main() {
       avgScore: 4.0,
       bookingRate: 5.4,
     },
+    // ================================
+    // 개봉예정작
+    // ================================
+    {
+      id: "movie-12",
+      title: "만달로리안과 그로구",
+      titleEn: "The Mandalorian and Grogu",
+      synopsis: "은하 제국의 몰락 이후, 잔존 제국 군벌들이 은하계를 위협하는 가운데 신공화국은 딘 자린과 그의 제자 그로구에게 헛족 로타 구출 임무를 의뢰한다. 스타워즈 드라마 시리즈의 후속작으로, 거대한 스케일의 우주 모험이 펼쳐진다.",
+      director: "존 파브로",
+      cast: '["페드로 파스칼", "제레미 앨런 화이트", "시고니 위버"]',
+      genre: "SF,액션,어드벤처",
+      rating: "TWELVE",
+      runtime: 132,
+      releaseDate: new Date("2026-05-22"),
+      posterUrl: null,
+      isNowShowing: false,
+      isComingSoon: true,
+      avgScore: 0,
+      bookingRate: 0,
+    },
+    {
+      id: "movie-13",
+      title: "토이 스토리 5",
+      titleEn: "Toy Story 5",
+      synopsis: "우디가 떠난 후 제시가 보니의 방 장난감들의 새 리더가 된다. 이제 8살이 된 보니는 태블릿에만 빠져 장난감에 관심이 없다. 기술의 발전 속에서 장난감의 존재 의미를 찾아가는 따뜻한 여정이 시작된다.",
+      director: "앤드류 스탠튼",
+      cast: '["톰 행크스", "팀 앨런", "조안 쿠삭", "키아누 리브스"]',
+      genre: "애니메이션,어드벤처,코미디,가족",
+      rating: "ALL",
+      runtime: 100,
+      releaseDate: new Date("2026-06-19"),
+      posterUrl: null,
+      isNowShowing: false,
+      isComingSoon: true,
+      avgScore: 0,
+      bookingRate: 0,
+    },
+    {
+      id: "movie-14",
+      title: "슈퍼걸: 내일의 여인",
+      titleEn: "Supergirl: Woman of Tomorrow",
+      synopsis: "23번째 생일을 맞이한 카라 조-엘은 반려견 크립토와 함께 우주를 여행하던 중, 복수를 꿈꾸는 소녀 루시를 만나 예상치 못한 임무에 뛰어들게 된다. 슈퍼맨과는 다른, 냉소적이고 강인한 슈퍼걸의 첫 번째 단독 영화.",
+      director: "크레이그 길레스피",
+      cast: '["밀리 알콕", "제이슨 모모아", "이브 리들리", "데이비드 코렌스웻"]',
+      genre: "SF,액션,슈퍼히어로",
+      rating: "TWELVE",
+      runtime: 120,
+      releaseDate: new Date("2026-06-26"),
+      posterUrl: null,
+      isNowShowing: false,
+      isComingSoon: true,
+      avgScore: 0,
+      bookingRate: 0,
+    },
   ];
 
   for (const movie of movies) {
@@ -281,13 +373,13 @@ async function main() {
   // 상영 일정 (향후 7일)
   // ================================
   const hallMovieMap = [
-    { hallId: "hall-01", movieId: "movie-07", price: 15000 },
-    { hallId: "hall-02", movieId: "movie-10", price: 15000 },
-    { hallId: "hall-03", movieId: "movie-08", price: 18000 },
-    { hallId: "hall-04", movieId: "movie-09", price: 15000 },
-    { hallId: "hall-05", movieId: "movie-11", price: 15000 },
-    { hallId: "hall-06", movieId: "movie-07", price: 15000 },
-    { hallId: "hall-07", movieId: "movie-10", price: 15000 },
+    { hallId: "hall-01", movieId: "movie-07" },
+    { hallId: "hall-02", movieId: "movie-10" },
+    { hallId: "hall-03", movieId: "movie-08" },
+    { hallId: "hall-04", movieId: "movie-09" },
+    { hallId: "hall-05", movieId: "movie-11" },
+    { hallId: "hall-06", movieId: "movie-07" },
+    { hallId: "hall-07", movieId: "movie-10" },
   ];
 
   const startTimes = [10, 13, 16, 19];
@@ -297,7 +389,7 @@ async function main() {
 
   let screeningIndex = 0;
   for (let day = 0; day < 7; day++) {
-    for (const { hallId, movieId, price } of hallMovieMap) {
+    for (const { hallId, movieId } of hallMovieMap) {
       const movie = movies.find((m) => m.id === movieId)!;
       const runtime = movie.runtime ?? 120;
 
@@ -319,7 +411,6 @@ async function main() {
             hallId,
             startTime,
             endTime,
-            price,
             status: "SCHEDULED",
           },
         });

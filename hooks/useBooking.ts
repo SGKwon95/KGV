@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import type { SeatSelection, TicketTypeOption, TICKET_PRICES } from "@/types";
+import type { SeatSelection, TicketTypeOption } from "@/types";
 
 interface BookingState {
   screeningId: string | null;
@@ -10,7 +10,8 @@ interface BookingState {
   setScreeningId: (id: string) => void;
   addSeat: (seat: SeatSelection) => void;
   removeSeat: (seatId: string) => void;
-  updateTicketType: (seatId: string, ticketType: TicketTypeOption) => void;
+  updateSeatPrice: (seatId: string, price: number) => void;
+  updateTicketType: (seatId: string, ticketType: TicketTypeOption, price: number) => void;
   clearBooking: () => void;
   getTotalPrice: () => number;
   getSeatCount: () => number;
@@ -32,10 +33,17 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       selectedSeats: state.selectedSeats.filter((s) => s.seatId !== seatId),
     })),
 
-  updateTicketType: (seatId, ticketType) =>
+  updateSeatPrice: (seatId, price) =>
     set((state) => ({
       selectedSeats: state.selectedSeats.map((s) =>
-        s.seatId === seatId ? { ...s, ticketType } : s
+        s.seatId === seatId ? { ...s, price } : s
+      ),
+    })),
+
+  updateTicketType: (seatId, ticketType, price) =>
+    set((state) => ({
+      selectedSeats: state.selectedSeats.map((s) =>
+        s.seatId === seatId ? { ...s, ticketType, price } : s
       ),
     })),
 

@@ -144,7 +144,6 @@ export function ScheduleStep({ movieId, theaters, onSelect, onBack }: ScheduleSt
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5">{s.hall.name}</p>
                       <p className="text-xs text-gray-400">잔여 {remaining}석</p>
-                      <p className="text-xs text-kgv-red mt-1">{formatPrice(s.price)}</p>
                     </button>
                   );
                 })}

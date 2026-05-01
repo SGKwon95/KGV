@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import { formatPrice, cn } from "@/lib/utils";
 import { ChevronLeft, CreditCard, Smartphone } from "lucide-react";
 import { useBookingStore } from "@/hooks/useBooking";
-import { TICKET_TYPE_LABELS, type TicketTypeOption } from "@/types";
+import { TICKET_PRICES, TICKET_TYPE_LABELS, type TicketTypeOption } from "@/types";
 
 const PAYMENT_METHODS = [
-  { id: "card", label: "신용/체크카드", icon: CreditCard },
-  { id: "kakao", label: "카카오페이", icon: Smartphone },
-  { id: "naver", label: "네이버페이", icon: Smartphone },
+  { id: "card",   label: "신용/체크카드", icon: CreditCard  },
+  { id: "kakao",  label: "카카오페이",    icon: Smartphone  },
+  { id: "naver",  label: "네이버페이",    icon: Smartphone  },
 ];
 
 interface PaymentStepProps {
@@ -22,8 +22,23 @@ export function PaymentStep({ screeningId, onBack }: PaymentStepProps) {
   const router = useRouter();
   const { selectedSeats, getTotalPrice, clearBooking, updateTicketType } = useBookingStore();
   const [paymentMethod, setPaymentMethod] = useState("card");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading]   = useState(false);
+  const [error,   setError]     = useState<string | null>(null);
+
+  const handleTicketTypeChange = async (seatId: string, newType: TicketTypeOption) => {
+    // 먼저 fallback 가격으로 즉시 업데이트 (UI 반응성)
+    updateTicketType(seatId, newType, TICKET_PRICES[newType]);
+    // 서버에서 실제 가격 조회 후 반영
+    try {
+      const res = await fetch(`/api/price-policy/calculate?ticketType=${newType}&screeningId=${screeningId}`);
+      if (res.ok) {
+        const { data } = await res.json();
+        updateTicketType(seatId, newType, data.totalPerSeat);
+      }
+    } catch {
+      // fallback 유지
+    }
+  };
 
   const handlePayment = async () => {
     setLoading(true);
@@ -35,9 +50,9 @@ export function PaymentStep({ screeningId, onBack }: PaymentStepProps) {
         body: JSON.stringify({
           screeningId,
           seats: selectedSeats.map((s) => ({
-            seatId: s.seatId,
+            seatId:     s.seatId,
             ticketType: s.ticketType,
-            price: s.price,
+            // price는 서버에서 계산하므로 전송하지 않음
           })),
           paymentMethod,
         }),
@@ -77,7 +92,7 @@ export function PaymentStep({ screeningId, onBack }: PaymentStepProps) {
               <span className="text-gray-300 text-sm">{seat.row}{seat.number}석</span>
               <select
                 value={seat.ticketType}
-                onChange={(e) => updateTicketType(seat.seatId, e.target.value as TicketTypeOption)}
+                onChange={(e) => handleTicketTypeChange(seat.seatId, e.target.value as TicketTypeOption)}
                 className="bg-kgv-dark text-white text-xs px-2 py-1 rounded border border-kgv-gray focus:border-kgv-red outline-none"
               >
                 {Object.entries(TICKET_TYPE_LABELS).map(([value, label]) => (
