@@ -42,12 +42,6 @@ const ADMIN_NAV = [
     icon: Building2,
     disabled: true,
   },
-  {
-    label: "회원 관리",
-    href: "/admin/users",
-    icon: Users,
-    disabled: true,
-  },
 ];
 
 export default function AdminLayout({
@@ -63,7 +57,10 @@ export default function AdminLayout({
       <aside className="w-60 shrink-0 bg-kgv-dark border-r border-kgv-gray flex flex-col">
         {/* 로고 영역 */}
         <div className="h-16 flex items-center px-6 border-b border-kgv-gray">
-          <Link href="/" className="text-xl font-black text-kgv-red tracking-wider">
+          <Link
+            href="/"
+            className="text-xl font-black text-kgv-red tracking-wider"
+          >
             KGV
           </Link>
           <span className="ml-2 text-xs text-gray-500 font-medium bg-kgv-gray px-2 py-0.5 rounded">
@@ -86,7 +83,9 @@ export default function AdminLayout({
                     <span className="flex items-center gap-3 px-3 py-2.5 rounded text-gray-600 cursor-not-allowed text-sm">
                       <Icon size={16} />
                       {item.label}
-                      <span className="ml-auto text-xs text-gray-700">준비중</span>
+                      <span className="ml-auto text-xs text-gray-700">
+                        준비중
+                      </span>
                     </span>
                   ) : (
                     <Link
@@ -99,7 +98,9 @@ export default function AdminLayout({
                     >
                       <Icon size={16} />
                       {item.label}
-                      {isActive && <ChevronRight size={14} className="ml-auto" />}
+                      {isActive && (
+                        <ChevronRight size={14} className="ml-auto" />
+                      )}
                     </Link>
                   )}
                 </li>
@@ -128,7 +129,7 @@ export default function AdminLayout({
             <ChevronRight size={14} />
             <span className="text-white">
               {ADMIN_NAV.find((n) =>
-                n.exact ? pathname === n.href : pathname.startsWith(n.href)
+                n.exact ? pathname === n.href : pathname.startsWith(n.href),
               )?.label ?? ""}
             </span>
           </div>

@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useState } from "react";
-import { Menu, X, Film, Ticket, MapPin, User } from "lucide-react";
+import { Menu, X, Film, Ticket, User } from "lucide-react";
 
 const NAV_LINKS = [
   { href: "/movies?type=nowShowing", label: "현재상영", icon: Film },
   { href: "/movies?type=comingSoon", label: "개봉예정", icon: Film },
   { href: "/booking", label: "예매", icon: Ticket },
-  { href: "/theaters", label: "극장", icon: MapPin },
 ];
 
 export function Header() {
@@ -21,7 +20,10 @@ export function Header() {
       <div className="container-main">
         <div className="flex items-center justify-between h-16">
           {/* 로고 */}
-          <Link href="/" className="text-2xl font-black text-kgv-red tracking-wider">
+          <Link
+            href="/"
+            className="text-2xl font-black text-kgv-red tracking-wider"
+          >
             KGV
           </Link>
 
@@ -64,7 +66,10 @@ export function Header() {
                 >
                   로그인
                 </Link>
-                <Link href="/register" className="btn-primary text-sm py-2 px-4">
+                <Link
+                  href="/register"
+                  className="btn-primary text-sm py-2 px-4"
+                >
                   회원가입
                 </Link>
               </>
@@ -98,7 +103,10 @@ export function Header() {
             <hr className="border-kgv-gray" />
             {session ? (
               <>
-                <Link href="/mypage" className="block text-gray-300 hover:text-white py-2">
+                <Link
+                  href="/mypage"
+                  className="block text-gray-300 hover:text-white py-2"
+                >
                   마이페이지
                 </Link>
                 <button
@@ -110,7 +118,10 @@ export function Header() {
               </>
             ) : (
               <>
-                <Link href="/login" className="block text-gray-300 hover:text-white py-2">
+                <Link
+                  href="/login"
+                  className="block text-gray-300 hover:text-white py-2"
+                >
                   로그인
                 </Link>
                 <Link href="/register" className="block text-kgv-red py-2">

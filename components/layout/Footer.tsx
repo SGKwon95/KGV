@@ -8,21 +8,43 @@ export function Footer() {
           <div>
             <h3 className="text-white font-semibold mb-4">영화</h3>
             <ul className="space-y-2 text-sm text-gray-400">
-              <li><Link href="/movies?type=nowShowing" className="hover:text-white transition-colors">현재상영</Link></li>
-              <li><Link href="/movies?type=comingSoon" className="hover:text-white transition-colors">개봉예정</Link></li>
+              <li>
+                <Link
+                  href="/movies?type=nowShowing"
+                  className="hover:text-white transition-colors"
+                >
+                  현재상영
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/movies?type=comingSoon"
+                  className="hover:text-white transition-colors"
+                >
+                  개봉예정
+                </Link>
+              </li>
             </ul>
           </div>
           <div>
             <h3 className="text-white font-semibold mb-4">예매</h3>
             <ul className="space-y-2 text-sm text-gray-400">
-              <li><Link href="/booking" className="hover:text-white transition-colors">영화 예매</Link></li>
-              <li><Link href="/mypage" className="hover:text-white transition-colors">예매 내역</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-white font-semibold mb-4">극장</h3>
-            <ul className="space-y-2 text-sm text-gray-400">
-              <li><Link href="/theaters" className="hover:text-white transition-colors">극장 찾기</Link></li>
+              <li>
+                <Link
+                  href="/booking"
+                  className="hover:text-white transition-colors"
+                >
+                  영화 예매
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/mypage"
+                  className="hover:text-white transition-colors"
+                >
+                  예매 내역
+                </Link>
+              </li>
             </ul>
           </div>
           <div>
@@ -34,7 +56,7 @@ export function Footer() {
           </div>
         </div>
         <div className="border-t border-kgv-gray pt-8 text-center text-sm text-gray-500">
-          <p>© 2024 KGV. All rights reserved.</p>
+          <p>© 2026 KGV. All rights reserved.</p>
         </div>
       </div>
     </footer>
